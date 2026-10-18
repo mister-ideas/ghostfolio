@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a date range selector to the home and the portfolio pages
+
 ### Changed
 
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
