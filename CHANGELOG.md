@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved the holdings table of the home overview by adding the sorting by name and performance
 - Changed the default sorting of the holdings table to the performance in descending order
+- Persisted the sorting of the holdings and accounts tables on the device
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
 - Improved the accessibility of the _Buy me a coffee_ button on the about page
 - Improved the accessibility of the entity logo component
