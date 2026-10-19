@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved the holdings table of the home overview by adding the sorting by name and performance
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
 - Improved the accessibility of the _Buy me a coffee_ button on the about page
 - Improved the accessibility of the entity logo component

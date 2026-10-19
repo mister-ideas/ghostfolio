@@ -210,11 +210,7 @@
       </td>
     </ng-container>
 
-    <tr
-      *matHeaderRowDef="displayedColumns()"
-      mat-header-row
-      [class.d-none]="mode() === 'simple'"
-    ></tr>
+    <tr *matHeaderRowDef="displayedColumns()" mat-header-row></tr>
     <tr
       *matRowDef="let row; columns: displayedColumns()"
       mat-row
