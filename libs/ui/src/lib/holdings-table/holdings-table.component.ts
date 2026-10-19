@@ -101,15 +101,8 @@ export class GfHoldingsTableComponent {
     return !this.holdings();
   });
 
-  protected readonly sortActive = computed(() => {
-    return this.mode() === 'default'
-      ? 'allocationInPercentage'
-      : 'assetProfile.name';
-  });
-
-  protected readonly sortDirection = computed<SortDirection>(() => {
-    return this.mode() === 'default' ? 'desc' : 'asc';
-  });
+  protected readonly sortActive = 'netPerformancePercentWithCurrencyEffect';
+  protected readonly sortDirection: SortDirection = 'desc';
 
   public constructor() {
     this.dataSource.sortingDataAccessor = (holding, path) => {

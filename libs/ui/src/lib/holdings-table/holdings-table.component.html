@@ -5,8 +5,8 @@
     matSort
     [class.simple]="mode() === 'simple'"
     [dataSource]="dataSource"
-    [matSortActive]="sortActive()"
-    [matSortDirection]="sortDirection()"
+    [matSortActive]="sortActive"
+    [matSortDirection]="sortDirection"
   >
     <ng-container matColumnDef="icon" [sticky]="mode() === 'default'">
       <th *matHeaderCellDef class="px-1" mat-header-cell></th>
