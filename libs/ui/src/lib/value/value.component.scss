@@ -8,3 +8,38 @@
     line-height: 1;
   }
 }
+
+@keyframes gf-flash-up {
+  from {
+    background-color: rgba(var(--bs-success-rgb, 40, 167, 69), 0.35);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes gf-flash-down {
+  from {
+    background-color: rgba(var(--bs-danger-rgb, 220, 53, 69), 0.35);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+:host(.gf-flash-up) {
+  animation: gf-flash-up 1.2s ease-out;
+}
+
+:host(.gf-flash-down) {
+  animation: gf-flash-down 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host(.gf-flash-down),
+  :host(.gf-flash-up) {
+    animation: none;
+  }
+}

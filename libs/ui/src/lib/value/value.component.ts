@@ -14,6 +14,7 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  SimpleChanges,
   ViewChild
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +25,8 @@ import { checkmarkOutline, copyOutline } from 'ionicons/icons';
 import { isNumber } from 'lodash-es';
 import ms from 'ms';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+
+import { getValueChangeDirection } from './value-change.helper';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,6 +71,7 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
   public constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private clipboard: Clipboard,
+    private elementRef: ElementRef<HTMLElement>,
     private snackBar: MatSnackBar
   ) {
     addIcons({
@@ -93,6 +97,39 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
     return precision !== undefined && precision >= 0;
   }
 
+  /**
+   * Briefly highlights the value in green or red if the displayed number
+   * has changed, e.g. after a background refresh.
+   */
+  private flashOnChange(changes?: SimpleChanges) {
+    const change = changes?.['value'];
+
+    if (!change || change.firstChange || this.isLoading()) {
+      return;
+    }
+
+    const direction = getValueChangeDirection({
+      currentValue: change.currentValue,
+      digits:
+        ((this.hasPrecision ? this.precision() : 2) ?? 2) +
+        (this.isPercent ? 2 : 0),
+      previousValue: change.previousValue
+    });
+
+    if (!direction) {
+      return;
+    }
+
+    const element = this.elementRef.nativeElement;
+
+    element.classList.remove('gf-flash-down', 'gf-flash-up');
+
+    // Force a reflow to restart the animation
+    void element.offsetWidth;
+
+    element.classList.add(`gf-flash-${direction}`);
+  }
+
   public ngAfterViewInit() {
     if (this.labelContent) {
       const element = this.labelContent.nativeElement;
@@ -104,8 +141,9 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
   }
 
-  public ngOnChanges() {
+  public ngOnChanges(changes?: SimpleChanges) {
     this.initializeVariables();
+    this.flashOnChange(changes);
 
     if (this.value || this.value === 0) {
       if (isNumber(this.value)) {

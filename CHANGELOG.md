@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a periodic refresh of the numbers on the home, analysis and accounts pages while the page is visible, highlighting changed values
+
 ### Changed
 
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
