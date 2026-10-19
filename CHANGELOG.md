@@ -10,12 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a periodic refresh of the numbers on the home, analysis and accounts pages while the page is visible, briefly coloring changed values green or red, with a live indicator in the header
+- Added a _Storybook_ story for the file drop area component
 
 ### Changed
 
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
 - Improved the accessibility of the _Buy me a coffee_ button on the about page
 - Improved the accessibility of the entity logo component
+- Extracted the file drop area of the import activities dialog to a reusable component
 - Improved the performance of the historical market data table of the admin control panel by loading only the latest market price per asset profile
 - Introduced a cooldown of 12 hours for the asset profile and exchange rate gathering on activity creation by retaining the completed jobs
 
