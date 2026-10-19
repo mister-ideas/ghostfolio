@@ -7,6 +7,7 @@ import {
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { AccountWithValue } from '@ghostfolio/common/types';
 import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
+import { GfFlashOnChangeDirective } from '@ghostfolio/ui/flash-on-change';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
@@ -42,6 +43,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfEntityLogoComponent,
+    GfFlashOnChangeDirective,
     GfValueComponent,
     IonIcon,
     MatButtonModule,
@@ -83,6 +85,11 @@ export class GfAccountsTableComponent {
   public readonly accountDeleted = output<string>();
 
   public readonly sort = viewChild.required(MatSort);
+
+  protected readonly trackByAccount = (
+    _index: number,
+    { id }: AccountWithValue
+  ) => id;
 
   protected readonly accountDialogRouterLinks = computed(() => {
     const { detail, update } = internalRoutes.accounts.subRoutes;

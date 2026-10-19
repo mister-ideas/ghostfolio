@@ -27,6 +27,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
+import { GfFlashOnChangeDirective } from '../flash-on-change/flash-on-change.directive';
 import { GfValueComponent } from '../value/value.component';
 import { HoldingsTableItem } from './interfaces/interfaces';
 
@@ -34,6 +35,7 @@ import { HoldingsTableItem } from './interfaces/interfaces';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfEntityLogoComponent,
+    GfFlashOnChangeDirective,
     GfValueComponent,
     MatButtonModule,
     MatDialogModule,
@@ -95,6 +97,11 @@ export class GfHoldingsTableComponent {
   });
 
   protected readonly getHoldingName = getHoldingName;
+
+  protected readonly trackByHolding = (
+    _index: number,
+    { assetProfile }: HoldingsTableItem
+  ) => `${assetProfile.dataSource}-${assetProfile.symbol}`;
   protected readonly isCashPosition = isCashPosition;
 
   protected readonly isLoading = computed(() => {

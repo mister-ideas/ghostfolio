@@ -120,7 +120,13 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
-    const element = this.elementRef.nativeElement;
+    // Highlight the number only, not the whole (full width) host element
+    const element =
+      this.elementRef.nativeElement.querySelector<HTMLElement>('.value');
+
+    if (!element) {
+      return;
+    }
 
     element.classList.remove('gf-flash-down', 'gf-flash-up');
 
@@ -128,6 +134,14 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
     void element.offsetWidth;
 
     element.classList.add(`gf-flash-${direction}`);
+
+    element.addEventListener(
+      'animationend',
+      () => {
+        element.classList.remove('gf-flash-down', 'gf-flash-up');
+      },
+      { once: true }
+    );
   }
 
   public ngAfterViewInit() {

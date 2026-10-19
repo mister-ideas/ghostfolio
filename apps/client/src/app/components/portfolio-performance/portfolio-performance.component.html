@@ -24,6 +24,8 @@
     }
     <div
       class="display-4 fw-bold m-0 text-center value-container"
+      [gfFlashDigits]="precision()"
+      [gfFlashOnChange]="displayedValue()"
       [hidden]="isLoading()"
     >
       <span #value id="value"></span>

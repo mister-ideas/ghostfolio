@@ -7,6 +7,7 @@
     [dataSource]="dataSource"
     [matSortActive]="sortActive()"
     [matSortDirection]="sortDirection()"
+    [trackBy]="trackByHolding"
   >
     <ng-container matColumnDef="icon" [sticky]="mode() === 'default'">
       <th *matHeaderCellDef class="px-1" mat-header-cell></th>
@@ -219,6 +220,7 @@
       *matRowDef="let row; columns: displayedColumns()"
       mat-row
       [class.cursor-pointer]="canShowDetails(row)"
+      [gfFlashOnChange]="row.netPerformancePercentWithCurrencyEffect * 100"
       (click)="
         canShowDetails(row) &&
           onOpenHoldingDialog({
