@@ -107,8 +107,9 @@ export class GfPortfolioPerformanceComponent {
   }
 
   /**
-   * Counts up from zero on the initial value and rolls from the current to
-   * the new number on a refresh. Nothing happens if the number is unchanged.
+   * Counts up from zero on the initial load and after a reload (e.g. a changed
+   * date range). A background refresh swaps the number without any counting
+   * animation. Nothing happens if the number is unchanged.
    */
   private showValue({
     decimalPlaces,
@@ -121,17 +122,20 @@ export class GfPortfolioPerformanceComponent {
       return;
     }
 
-    const isUpdate = this.countUpTarget !== undefined;
+    const isRefresh = this.countUpTarget !== undefined;
 
     this.countUp = new CountUp('value', value, {
       decimalPlaces,
       decimal: getNumberFormatDecimal(this.locale()),
-      duration: isUpdate ? 0.6 : 1,
-      separator: getNumberFormatGroup(this.locale()),
-      startVal: isUpdate ? this.countUpTarget : 0
+      duration: 1,
+      separator: getNumberFormatGroup(this.locale())
     });
 
-    this.countUp.start();
+    if (isRefresh) {
+      this.value().nativeElement.textContent = this.countUp.formatNumber(value);
+    } else {
+      this.countUp.start();
+    }
 
     this.countUpTarget = value;
   }
