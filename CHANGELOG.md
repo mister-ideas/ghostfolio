@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added the `DATA_GATHERING_INTERVAL_MINUTES` environment variable to configure the interval of the market data gathering of the asset profiles with the hourly data gathering frequency
+
 ### Changed
 
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
