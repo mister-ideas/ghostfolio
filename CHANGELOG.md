@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Changed the default date range of users without a stored date range from `max` to `ytd`
 - Improved the usability of the activities page by eliminating the reload on canceling the import activities dialog
 - Improved the accessibility of the _Buy me a coffee_ button on the about page
 - Improved the accessibility of the entity logo component
