@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a date range selector to the home and the portfolio pages
+- Persisted the selected date range on the device and restored it on page load
 
 ### Changed
 

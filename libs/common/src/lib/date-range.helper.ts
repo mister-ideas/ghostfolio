@@ -31,3 +31,35 @@ export function getAvailableDateRanges({
 
   return dateRanges;
 }
+
+export const STORED_DATE_RANGE_KEY = 'gf-date-range';
+
+/**
+ * Returns the date range which has been selected last on this device
+ * (e.g. `ytd` or a year like `2025`), if any.
+ */
+export function getStoredDateRange(storage?: Pick<Storage, 'getItem'>) {
+  try {
+    const value = (storage ?? globalThis.localStorage)?.getItem(
+      STORED_DATE_RANGE_KEY
+    );
+
+    return value && /^(1d|wtd|mtd|ytd|1y|5y|max|\d{4})$/.test(value)
+      ? (value as DateRange)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveStoredDateRange(
+  dateRange: DateRange,
+  storage?: Pick<Storage, 'setItem'>
+) {
+  try {
+    (storage ?? globalThis.localStorage)?.setItem(
+      STORED_DATE_RANGE_KEY,
+      dateRange
+    );
+  } catch {}
+}
