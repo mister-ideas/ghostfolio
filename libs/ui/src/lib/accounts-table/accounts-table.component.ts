@@ -7,7 +7,6 @@ import {
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { AccountWithValue } from '@ghostfolio/common/types';
 import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
-import { GfFlashOnChangeDirective } from '@ghostfolio/ui/flash-on-change';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
@@ -43,7 +42,6 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfEntityLogoComponent,
-    GfFlashOnChangeDirective,
     GfValueComponent,
     IonIcon,
     MatButtonModule,

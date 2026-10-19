@@ -103,6 +103,7 @@ export class GfAccountsPageComponent implements OnInit {
       )
       .subscribe((response) => {
         this.updateAccounts(response);
+        this.autoRefreshService.markUpdated();
       });
   }
 

@@ -27,7 +27,6 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
-import { GfFlashOnChangeDirective } from '../flash-on-change/flash-on-change.directive';
 import { GfValueComponent } from '../value/value.component';
 import { HoldingsTableItem } from './interfaces/interfaces';
 
@@ -35,7 +34,6 @@ import { HoldingsTableItem } from './interfaces/interfaces';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfEntityLogoComponent,
-    GfFlashOnChangeDirective,
     GfValueComponent,
     MatButtonModule,
     MatDialogModule,

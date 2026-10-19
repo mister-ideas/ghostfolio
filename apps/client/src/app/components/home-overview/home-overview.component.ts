@@ -168,6 +168,8 @@ export class GfHomeOverviewComponent implements OnInit {
       .subscribe(({ errors, performance }) => {
         this.errors.set(errors ?? []);
         this.performance.set(performance);
+
+        this.autoRefreshService.markUpdated();
       });
 
     this.autoRefreshService.refresh$

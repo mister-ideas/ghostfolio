@@ -196,6 +196,7 @@ export class GfAnalysisPageComponent implements OnInit {
 
         this.updateTopAndBottomHoldings(holdings);
 
+        this.autoRefreshService.markUpdated();
         this.changeDetectorRef.markForCheck();
       });
   }

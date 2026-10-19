@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a periodic refresh of the numbers on the home, analysis and accounts pages while the page is visible, highlighting changed values and table rows
+- Added a periodic refresh of the numbers on the home, analysis and accounts pages while the page is visible, briefly coloring changed values green or red, with a live indicator in the header
 
 ### Changed
 

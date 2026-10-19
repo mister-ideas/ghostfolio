@@ -220,7 +220,6 @@
       *matRowDef="let row; columns: displayedColumns()"
       mat-row
       [class.cursor-pointer]="canShowDetails(row)"
-      [gfFlashOnChange]="row.netPerformancePercentWithCurrencyEffect * 100"
       (click)="
         canShowDetails(row) &&
           onOpenHoldingDialog({

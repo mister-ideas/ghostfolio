@@ -153,6 +153,7 @@ export class GfHomeHoldingsComponent implements OnInit {
       .subscribe(({ holdings }) => {
         this.holdings = holdings;
 
+        this.autoRefreshService.markUpdated();
         this.changeDetectorRef.markForCheck();
       });
   }

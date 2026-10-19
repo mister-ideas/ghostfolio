@@ -1,4 +1,4 @@
-import { Service } from '@angular/core';
+import { Service, signal } from '@angular/core';
 import { EMPTY, fromEvent, Observable, timer } from 'rxjs';
 import {
   distinctUntilChanged,
@@ -8,7 +8,30 @@ import {
   switchMap
 } from 'rxjs/operators';
 
-export const AUTO_REFRESH_INTERVAL_MS = 15_000;
+export const AUTO_REFRESH_INTERVAL_MS = 5000;
+export const AUTO_REFRESH_INTERVAL_STORAGE_KEY = 'gf-auto-refresh-ms';
+
+/**
+ * Returns the refresh interval of this device: the stored override (between
+ * 1 second and 1 minute) or the default.
+ */
+export function getAutoRefreshInterval(
+  storage?: Pick<Storage, 'getItem'>
+): number {
+  try {
+    const value = Number(
+      (storage ?? globalThis.localStorage)?.getItem(
+        AUTO_REFRESH_INTERVAL_STORAGE_KEY
+      )
+    );
+
+    return Number.isFinite(value) && value >= 1000 && value <= 60_000
+      ? value
+      : AUTO_REFRESH_INTERVAL_MS;
+  } catch {
+    return AUTO_REFRESH_INTERVAL_MS;
+  }
+}
 
 /**
  * Emits at a fixed interval while the page is visible so that pages can
@@ -17,6 +40,7 @@ export const AUTO_REFRESH_INTERVAL_MS = 15_000;
  */
 @Service()
 export class AutoRefreshService {
+  public readonly lastUpdated = signal<Date | null>(null);
   public readonly refresh$: Observable<void>;
 
   public constructor() {
@@ -31,15 +55,21 @@ export class AutoRefreshService {
           return EMPTY;
         }
 
-        const dueTime = isFirstActivation ? AUTO_REFRESH_INTERVAL_MS : 0;
+        const interval = getAutoRefreshInterval();
+        const dueTime = isFirstActivation ? interval : 0;
 
         isFirstActivation = false;
 
-        return timer(dueTime, AUTO_REFRESH_INTERVAL_MS).pipe(
-          map(() => undefined)
-        );
+        return timer(dueTime, interval).pipe(map(() => undefined));
       }),
       share()
     );
+  }
+
+  /**
+   * To be called by a page after it has silently refreshed its numbers.
+   */
+  public markUpdated() {
+    this.lastUpdated.set(new Date());
   }
 }

@@ -375,7 +375,6 @@
       *matRowDef="let row; columns: displayedColumns()"
       mat-row
       [class.cursor-pointer]="hasPermissionToOpenDetails()"
-      [gfFlashOnChange]="row.valueInBaseCurrency"
       (click)="onOpenAccountDetailDialog(row.id)"
     ></tr>
     <tr
