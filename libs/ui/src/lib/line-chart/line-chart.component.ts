@@ -210,6 +210,10 @@ export class GfLineChartComponent
           ? animations
           : undefined;
 
+        // The date range can change while the chart stays alive
+        this.chart.options.scales ??= {};
+        this.chart.options.scales['x'] = this.getTimeAxisConfiguration();
+
         this.chart.update();
       } else {
         this.chart = new Chart<'line'>(this.chartCanvas.nativeElement, {
@@ -236,13 +240,7 @@ export class GfLineChartComponent
               }
             },
             scales: {
-              x: getTimeAxisOptions({
-                colorScheme: this.colorScheme,
-                display: this.showXAxis,
-                locale: this.locale,
-                ...getTimeAxisBounds(this.dateRange),
-                unit: getTimeAxisUnit(this.dateRange)
-              }),
+              x: this.getTimeAxisConfiguration(),
               y: {
                 ...getValueAxisOptions({
                   colorScheme: this.colorScheme,
@@ -290,6 +288,16 @@ export class GfLineChartComponent
     }
 
     this.isLoading = false;
+  }
+
+  private getTimeAxisConfiguration() {
+    return getTimeAxisOptions({
+      colorScheme: this.colorScheme,
+      display: this.showXAxis,
+      locale: this.locale,
+      ...getTimeAxisBounds(this.dateRange),
+      unit: getTimeAxisUnit(this.dateRange)
+    });
   }
 
   private getAnimationConfigurationForAxis({

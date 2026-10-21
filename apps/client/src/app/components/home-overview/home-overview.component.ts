@@ -13,6 +13,7 @@ import {
 import { isCashPosition } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
+  HistoricalDataItem,
   LineChartItem,
   PortfolioPerformance,
   PortfolioPosition,
@@ -21,6 +22,7 @@ import {
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { hasScope, scopes } from '@ghostfolio/common/scopes';
+import { DateRange } from '@ghostfolio/common/types';
 import { GfHoldingsTableComponent } from '@ghostfolio/ui/holdings-table';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
 import { DataService } from '@ghostfolio/ui/services';
@@ -40,6 +42,11 @@ import { MatCardModule } from '@angular/material/card';
 import { Router, RouterModule } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { catchError, EMPTY, exhaustMap, filter } from 'rxjs';
+
+import {
+  getIntradayChartItems,
+  recordIntradaySample
+} from './intraday-samples';
 
 const MINIMUM_CHART_ITEMS = 3;
 
@@ -179,9 +186,14 @@ export class GfHomeOverviewComponent implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ errors, performance }) => {
+      .subscribe(({ chart, errors, performance }) => {
         this.errors.set(errors ?? []);
         this.performance.set(performance);
+
+        if (this.user()?.settings?.dateRange === '1d') {
+          // Extend the chart of the day with the new value
+          this.setChartItems({ chart, dateRange: '1d' });
+        }
 
         this.autoRefreshService.markUpdated();
       });
@@ -225,6 +237,37 @@ export class GfHomeOverviewComponent implements OnInit {
     });
   }
 
+  private setChartItems({
+    chart,
+    dateRange
+  }: {
+    chart?: HistoricalDataItem[];
+    dateRange?: DateRange;
+  }) {
+    const items =
+      chart?.map(({ date, netPerformanceInPercentageWithCurrencyEffect }) => {
+        return {
+          date,
+          value: (netPerformanceInPercentageWithCurrencyEffect ?? 0) * 100
+        };
+      }) ?? null;
+
+    const latest = items?.at(-1);
+
+    if ((dateRange ?? DEFAULT_USER_DATE_RANGE) === '1d' && latest) {
+      // There is only one value per day on the server: draw the day from the
+      // close of the previous day to the samples recorded on this device
+      this.historicalDataItems.set(
+        getIntradayChartItems({
+          baseline: items?.[0]?.value ?? 0,
+          samples: recordIntradaySample({ value: latest.value })
+        })
+      );
+    } else {
+      this.historicalDataItems.set(items);
+    }
+  }
+
   private update() {
     const userSettings = this.user()?.settings;
 
@@ -254,16 +297,7 @@ export class GfHomeOverviewComponent implements OnInit {
         this.errors.set(errors ?? []);
         this.performance.set(performance);
 
-        this.historicalDataItems.set(
-          chart?.map(
-            ({ date, netPerformanceInPercentageWithCurrencyEffect }) => {
-              return {
-                date,
-                value: (netPerformanceInPercentageWithCurrencyEffect ?? 0) * 100
-              };
-            }
-          ) ?? null
-        );
+        this.setChartItems({ chart, dateRange: userSettings?.dateRange });
 
         this.precision.set(2);
 

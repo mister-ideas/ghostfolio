@@ -190,7 +190,7 @@ export function getTimeAxisOptions({
       maxTicksLimit: 6
     },
     time: {
-      tooltipFormat: getDateFormatString(locale),
+      tooltipFormat: unit === 'hour' ? 'HH:mm' : getDateFormatString(locale),
       unit
     },
     type: 'time'
