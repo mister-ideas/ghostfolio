@@ -41,6 +41,8 @@ import { Router, RouterModule } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { catchError, EMPTY, exhaustMap, filter } from 'rxjs';
 
+const MINIMUM_CHART_ITEMS = 3;
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -60,6 +62,12 @@ export class GfHomeOverviewComponent implements OnInit {
   protected readonly errors = signal<AssetProfileIdentifier[]>([]);
   protected readonly hasImpersonationId = signal(false);
   protected readonly historicalDataItems = signal<LineChartItem[] | null>(null);
+
+  // A line through only two points (e.g. the close of the previous day and
+  // now) is drawn as a misleading slope across the whole width
+  protected readonly hasEnoughChartData = computed(() => {
+    return (this.historicalDataItems()?.length ?? 0) >= MINIMUM_CHART_ITEMS;
+  });
   protected readonly holdings = signal<PortfolioPosition[] | undefined>(
     undefined
   );
