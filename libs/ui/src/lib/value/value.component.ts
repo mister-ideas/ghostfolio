@@ -120,9 +120,11 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
-    // Highlight the number only, not the whole (full width) host element
+    // Highlight the whole figure (sign, number and unit) but not the full width host element
     const element =
-      this.elementRef.nativeElement.querySelector<HTMLElement>('.value');
+      this.elementRef.nativeElement.querySelector<HTMLElement>(
+        '.gf-value-line'
+      );
 
     if (!element) {
       return;

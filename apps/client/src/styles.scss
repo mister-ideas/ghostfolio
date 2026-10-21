@@ -503,28 +503,42 @@ ngx-skeleton-loader {
   }
 }
 
-// Highlight of a changed value: the number briefly takes the colour of the
-// change (green up, red down) and fades back to its normal colour
+// Highlight of a changed value: the whole figure (sign, number and unit) gets
+// a soft background tint in the direction of the change, which fades out. The
+// text colors stay untouched, so the persistent colors of the sign (positive
+// / negative) and the temporary highlight (value just changed) never mix up
 @keyframes gf-flash-up {
-  0%,
-  35% {
-    color: var(--bs-success, #198754);
+  from {
+    background-color: color-mix(
+      in srgb,
+      var(--bs-success, #198754) 30%,
+      transparent
+    );
   }
 }
 
 @keyframes gf-flash-down {
-  0%,
-  35% {
-    color: var(--bs-danger, #dc3545);
+  from {
+    background-color: color-mix(
+      in srgb,
+      var(--bs-danger, #dc3545) 30%,
+      transparent
+    );
   }
 }
 
+.gf-flash-up,
+.gf-flash-down {
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 0.125rem transparent;
+}
+
 .gf-flash-up {
-  animation: gf-flash-up 1.8s ease-out;
+  animation: gf-flash-up 1.2s ease-out;
 }
 
 .gf-flash-down {
-  animation: gf-flash-down 1.8s ease-out;
+  animation: gf-flash-down 1.2s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
