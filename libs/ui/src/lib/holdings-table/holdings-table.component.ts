@@ -97,6 +97,11 @@ export class GfHoldingsTableComponent {
   });
 
   protected readonly getHoldingName = getHoldingName;
+
+  protected readonly trackByHolding = (
+    _index: number,
+    { assetProfile }: HoldingsTableItem
+  ) => `${assetProfile.dataSource}-${assetProfile.symbol}`;
   protected readonly isCashPosition = isCashPosition;
 
   protected readonly isLoading = computed(() => {

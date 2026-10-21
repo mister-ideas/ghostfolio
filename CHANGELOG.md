@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for comparing the performance with multiple benchmarks in the benchmark comparator of the analysis page
 - Added a date range selector to the home and the portfolio pages
 - Persisted the selected date range on the device and restored it on page load
+- Added a periodic refresh of the numbers on the home, analysis and accounts pages while the page is visible, briefly coloring changed values green or red, with a live indicator in the header
 - Added a _Storybook_ story for the file drop area component
 
 ### Changed

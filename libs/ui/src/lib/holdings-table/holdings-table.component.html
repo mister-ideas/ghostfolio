@@ -8,6 +8,7 @@
     [gfPersistSort]="'holdings-' + mode()"
     [matSortActive]="sortActive"
     [matSortDirection]="sortDirection"
+    [trackBy]="trackByHolding"
   >
     <ng-container matColumnDef="icon" [sticky]="mode() === 'default'">
       <th *matHeaderCellDef class="px-1" mat-header-cell></th>

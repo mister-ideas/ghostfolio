@@ -21,6 +21,7 @@
     matSortDirection="asc"
     [dataSource]="dataSource"
     [gfPersistSort]="'accounts'"
+    [trackBy]="trackByAccount"
   >
     <ng-container matColumnDef="status">
       <th
