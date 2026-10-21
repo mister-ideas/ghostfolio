@@ -14,6 +14,7 @@ import type {
 import type { AnnotationOptions } from 'chartjs-plugin-annotation';
 import { format } from 'date-fns';
 
+import { secondaryColorRgb } from './config';
 import {
   DATE_FORMAT,
   DATE_FORMAT_MONTHLY,
@@ -39,6 +40,21 @@ export function formatGroupedDate({
   }
 
   return format(date, DATE_FORMAT);
+}
+
+// Colors for the lines of the compared benchmarks, the portfolio uses the
+// primary color
+const BENCHMARK_COLORS = [
+  `rgb(${secondaryColorRgb.r}, ${secondaryColorRgb.g}, ${secondaryColorRgb.b})`,
+  'rgb(255, 159, 64)',
+  'rgb(75, 192, 112)',
+  'rgb(153, 102, 255)',
+  'rgb(255, 99, 132)',
+  'rgb(201, 203, 207)'
+];
+
+export function getBenchmarkColor(index: number) {
+  return BENCHMARK_COLORS[index % BENCHMARK_COLORS.length];
 }
 
 export function getChartBorderColor(colorScheme?: ColorScheme) {
