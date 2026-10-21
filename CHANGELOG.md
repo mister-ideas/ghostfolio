@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Changed the default date range of users without a stored date range from `max` to `ytd`
+- Improved the holdings table of the home overview by adding the sorting by name and performance
+- Changed the default sorting of the holdings table to the performance in descending order
+- Persisted the sorting of the holdings and accounts tables on the device
 - Upgraded `@modelcontextprotocol/core` and `@modelcontextprotocol/server` from version `2.0.0` to `2.3.1`
 - Upgraded `@modelcontextprotocol/node` from version `2.0.0` to `2.1.1`
 
