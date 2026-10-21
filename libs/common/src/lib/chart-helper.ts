@@ -24,7 +24,7 @@ import {
   getLocale,
   getTextColor
 } from './helper';
-import { ColorScheme, GroupBy } from './types';
+import { ColorScheme, DateRange, GroupBy } from './types';
 
 export function formatGroupedDate({
   date,
@@ -76,16 +76,41 @@ export function getChartElementsOptions(
   };
 }
 
+/**
+ * Returns the unit of the ticks of the time axis, so that the labels fit the
+ * length of the date range: days up to a month, months up to a year and years
+ * above
+ */
+export function getTimeAxisUnit(
+  aDateRange?: DateRange
+): 'day' | 'month' | 'year' {
+  switch (aDateRange) {
+    case '1d':
+    case 'mtd':
+    case 'wtd':
+      return 'day';
+    case '5y':
+    case 'max':
+    case undefined:
+      return 'year';
+    default:
+      // 'ytd', '1y' and single years
+      return 'month';
+  }
+}
+
 export function getTimeAxisOptions({
   borderWidth = 1,
   colorScheme,
   display = true,
-  locale = getLocale()
+  locale = getLocale(),
+  unit = 'year'
 }: {
   borderWidth?: number;
   colorScheme?: ColorScheme;
   display?: boolean;
   locale?: string;
+  unit?: 'day' | 'month' | 'year';
 }): ScaleOptions<'time'> {
   return {
     display,
@@ -96,9 +121,14 @@ export function getTimeAxisOptions({
     grid: {
       display: false
     },
+    ticks: {
+      autoSkip: true,
+      maxRotation: 0,
+      maxTicksLimit: 6
+    },
     time: {
       tooltipFormat: getDateFormatString(locale),
-      unit: 'year'
+      unit
     },
     type: 'time'
   };

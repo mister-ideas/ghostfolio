@@ -61,6 +61,7 @@ const MINIMUM_CHART_ITEMS = 3;
 export class GfHomeOverviewComponent implements OnInit {
   protected readonly errors = signal<AssetProfileIdentifier[]>([]);
   protected readonly hasImpersonationId = signal(false);
+  protected readonly defaultDateRange = DEFAULT_USER_DATE_RANGE;
   protected readonly historicalDataItems = signal<LineChartItem[] | null>(null);
 
   // A line through only two points (e.g. the close of the previous day and

@@ -1,6 +1,7 @@
 import {
   getChartBorderColor,
   getTimeAxisOptions,
+  getTimeAxisUnit,
   getValueAxisOptions,
   getVerticalHoverLinePlugin
 } from '@ghostfolio/common/chart-helper';
@@ -10,7 +11,7 @@ import {
   LineChartItem,
   NullableLineChartItem
 } from '@ghostfolio/common/interfaces';
-import { ColorScheme } from '@ghostfolio/common/types';
+import { ColorScheme, DateRange } from '@ghostfolio/common/types';
 
 import {
   AfterViewInit,
@@ -60,6 +61,7 @@ export class GfLineChartComponent
   @Input() benchmarkLabel = '';
   @Input() colorScheme?: ColorScheme;
   @Input() currency?: string;
+  @Input() dateRange?: DateRange;
   @Input() historicalDataItems: LineChartItem[] | null;
   @Input() isAnimated = false;
   @Input() label: string;
@@ -236,7 +238,8 @@ export class GfLineChartComponent
               x: getTimeAxisOptions({
                 colorScheme: this.colorScheme,
                 display: this.showXAxis,
-                locale: this.locale
+                locale: this.locale,
+                unit: getTimeAxisUnit(this.dateRange)
               }),
               y: {
                 ...getValueAxisOptions({
