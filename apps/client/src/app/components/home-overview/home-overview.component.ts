@@ -161,7 +161,7 @@ export class GfHomeOverviewComponent implements OnInit {
         exhaustMap(() => {
           return this.dataService
             .fetchPortfolioPerformance({
-              range: this.user()?.settings?.dateRange ?? DEFAULT_DATE_RANGE
+              range: this.user()?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
             })
             .pipe(catchError(() => EMPTY));
         }),

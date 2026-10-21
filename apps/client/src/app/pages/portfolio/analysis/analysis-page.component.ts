@@ -207,7 +207,7 @@ export class GfAnalysisPageComponent implements OnInit {
             }),
             performance: this.dataService.fetchPortfolioPerformance({
               filters: this.userService.getFilters(),
-              range: this.user?.settings?.dateRange ?? DEFAULT_DATE_RANGE
+              range: this.user?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
             })
           }).pipe(catchError(() => EMPTY));
         }),
