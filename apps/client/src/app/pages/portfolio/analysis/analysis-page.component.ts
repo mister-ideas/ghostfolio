@@ -1,4 +1,5 @@
 import { GfBenchmarkComparatorComponent } from '@ghostfolio/client/components/benchmark-comparator/benchmark-comparator.component';
+import { GfDateRangeSelectorComponent } from '@ghostfolio/client/components/date-range-selector/date-range-selector.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   DEFAULT_USER_DATE_RANGE,
@@ -69,6 +70,7 @@ type BenchmarkProfile = Partial<SymbolProfile> &
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GfBenchmarkComparatorComponent,
+    GfDateRangeSelectorComponent,
     GfInvestmentChartComponent,
     GfPremiumIndicatorComponent,
     GfToggleComponent,

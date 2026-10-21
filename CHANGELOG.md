@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the `DATA_GATHERING_INTERVAL_MINUTES` environment variable to configure the interval of the market data gathering of the asset profiles with the hourly data gathering frequency
 - Added support for comparing the performance with multiple benchmarks in the benchmark comparator of the analysis page
+- Added a date range selector to the home and the portfolio pages
+- Persisted the selected date range on the device and restored it on page load
 - Added a _Storybook_ story for the file drop area component
 
 ### Changed
