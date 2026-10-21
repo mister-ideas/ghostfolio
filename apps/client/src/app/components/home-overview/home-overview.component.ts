@@ -67,7 +67,10 @@ export class GfHomeOverviewComponent implements OnInit {
   // A line through only two points (e.g. the close of the previous day and
   // now) is drawn as a misleading slope across the whole width
   protected readonly hasEnoughChartData = computed(() => {
-    return (this.historicalDataItems()?.length ?? 0) >= MINIMUM_CHART_ITEMS;
+    const dateRange = this.user()?.settings?.dateRange;
+    const minimum = dateRange === '1d' ? 1 : MINIMUM_CHART_ITEMS;
+
+    return (this.historicalDataItems()?.length ?? 0) >= minimum;
   });
   protected readonly holdings = signal<PortfolioPosition[] | undefined>(
     undefined

@@ -12,7 +12,17 @@ import type {
   TooltipPosition
 } from 'chart.js';
 import type { AnnotationOptions } from 'chartjs-plugin-annotation';
-import { format } from 'date-fns';
+import {
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  endOfYear,
+  format,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  startOfYear
+} from 'date-fns';
 
 import { secondaryColorRgb } from './config';
 import {
@@ -83,9 +93,10 @@ export function getChartElementsOptions(
  */
 export function getTimeAxisUnit(
   aDateRange?: DateRange
-): 'day' | 'month' | 'year' {
+): 'day' | 'hour' | 'month' | 'year' {
   switch (aDateRange) {
     case '1d':
+      return 'hour';
     case 'mtd':
     case 'wtd':
       return 'day';
@@ -99,18 +110,68 @@ export function getTimeAxisUnit(
   }
 }
 
+/**
+ * Returns the bounds of the time axis for the date ranges which have a fixed
+ * end (the current week, month or year), so that the chart shows the whole
+ * period with the part still to come left empty. Other date ranges (rolling
+ * periods and `max`) end at the latest data point.
+ */
+export function getTimeAxisBounds(
+  aDateRange?: DateRange,
+  aReferenceDate = new Date()
+): { max?: number; min?: number } {
+  switch (aDateRange) {
+    case '1d':
+      return {
+        max: endOfDay(aReferenceDate).getTime(),
+        min: startOfDay(aReferenceDate).getTime()
+      };
+    case 'wtd':
+      return {
+        max: endOfWeek(aReferenceDate, { weekStartsOn: 1 }).getTime(),
+        min: startOfWeek(aReferenceDate, { weekStartsOn: 1 }).getTime()
+      };
+    case 'mtd':
+      return {
+        max: endOfMonth(aReferenceDate).getTime(),
+        min: startOfMonth(aReferenceDate).getTime()
+      };
+    case 'ytd':
+      return {
+        max: endOfYear(aReferenceDate).getTime(),
+        min: startOfYear(aReferenceDate).getTime()
+      };
+    default: {
+      if (typeof aDateRange === 'string' && /^\d{4}$/.test(aDateRange)) {
+        const year = new Date(Number(aDateRange), 0, 1);
+
+        return {
+          max: endOfYear(year).getTime(),
+          min: startOfYear(year).getTime()
+        };
+      }
+
+      return {};
+    }
+  }
+}
+
 export function getTimeAxisOptions({
   borderWidth = 1,
   colorScheme,
   display = true,
   locale = getLocale(),
+  max,
+  min,
   unit = 'year'
 }: {
   borderWidth?: number;
   colorScheme?: ColorScheme;
   display?: boolean;
   locale?: string;
-  unit?: 'day' | 'month' | 'year';
+  max?: number;
+  min?: number;
+  unit?: 'day' | 'hour' | 'month' | 'year';
 }): ScaleOptions<'time'> {
   return {
     display,
@@ -121,6 +182,8 @@ export function getTimeAxisOptions({
     grid: {
       display: false
     },
+    max,
+    min,
     ticks: {
       autoSkip: true,
       maxRotation: 0,

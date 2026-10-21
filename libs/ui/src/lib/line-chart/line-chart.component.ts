@@ -1,5 +1,6 @@
 import {
   getChartBorderColor,
+  getTimeAxisBounds,
   getTimeAxisOptions,
   getTimeAxisUnit,
   getValueAxisOptions,
@@ -239,6 +240,7 @@ export class GfLineChartComponent
                 colorScheme: this.colorScheme,
                 display: this.showXAxis,
                 locale: this.locale,
+                ...getTimeAxisBounds(this.dateRange),
                 unit: getTimeAxisUnit(this.dateRange)
               }),
               y: {
