@@ -63,3 +63,14 @@ export function saveStoredDateRange(
     );
   } catch {}
 }
+
+/**
+ * Whether the date range is drawn from intraday prices (1 minute for the
+ * current day, 5 minutes for the current week, 30 minutes for the current
+ * month) instead of daily prices
+ */
+export function isIntradayDateRange(
+  aDateRange?: DateRange
+): aDateRange is '1d' | 'mtd' | 'wtd' {
+  return aDateRange === '1d' || aDateRange === 'mtd' || aDateRange === 'wtd';
+}

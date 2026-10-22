@@ -81,6 +81,10 @@ import type { PlatformsResponse } from './responses/platforms-response.interface
 import type { PortfolioDividendsResponse } from './responses/portfolio-dividends-response.interface';
 import type { PortfolioHoldingResponse } from './responses/portfolio-holding-response.interface';
 import type { PortfolioHoldingsResponse } from './responses/portfolio-holdings-response.interface';
+import type {
+  PortfolioIntradayItem,
+  PortfolioIntradayResponse
+} from './responses/portfolio-intraday-response.interface';
 import type { PortfolioInvestmentsResponse } from './responses/portfolio-investments.interface';
 import type { PortfolioPerformanceResponse } from './responses/portfolio-performance-response.interface';
 import type { PortfolioReportResponse } from './responses/portfolio-report.interface';
@@ -182,6 +186,8 @@ export {
   PortfolioHoldingsResponse,
   PortfolioInvestmentsResponse,
   PortfolioPerformance,
+  PortfolioIntradayItem,
+  PortfolioIntradayResponse,
   PortfolioPerformanceResponse,
   PortfolioPosition,
   PortfolioReportResponse,
