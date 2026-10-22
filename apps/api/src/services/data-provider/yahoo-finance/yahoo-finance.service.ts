@@ -212,7 +212,7 @@ export class YahooFinanceService implements DataProviderInterface {
     symbol
   }: {
     from: Date;
-    interval: '1m' | '5m' | '30m';
+    interval: '5m' | '15m' | '60m';
     symbol: string;
   }): Promise<{
     prices: { date: Date; price: number }[];

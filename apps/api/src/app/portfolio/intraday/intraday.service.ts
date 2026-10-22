@@ -200,7 +200,7 @@ export class IntradayService {
   }: {
     dataSource: DataSource;
     from: Date;
-    interval: '1m' | '5m' | '30m';
+    interval: '5m' | '15m' | '60m';
     symbol: string;
   }): Promise<IntradayInstrument> {
     if (dataSource !== DataSource.YAHOO) {

@@ -1,8 +1,11 @@
+import { addDays, format } from 'date-fns';
+
 import {
   getTimeAxisUnit,
   getTimeSeriesTickCallback,
   getTradingDayItems
 } from './chart-helper';
+import { DATE_FORMAT } from './helper';
 
 describe('getTimeAxisUnit', () => {
   it.each([
@@ -109,5 +112,30 @@ describe('getTimeSeriesTickCallback', () => {
       .filter(Boolean);
 
     expect(labels.length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('getTradingDayItems with many items', () => {
+  it('keeps one point per week (the last trading day)', () => {
+    const items = Array.from({ length: 28 }, (_, index) => {
+      return {
+        date: format(addDays(new Date(2026, 0, 5), index), DATE_FORMAT),
+        value: index
+      };
+    });
+
+    const result = getTradingDayItems({ dateRange: '1y', items, maxItems: 10 });
+
+    expect(
+      result.map(({ date }) => {
+        return date;
+      })
+    ).toEqual([
+      '2026-01-05',
+      '2026-01-09',
+      '2026-01-16',
+      '2026-01-23',
+      '2026-01-30'
+    ]);
   });
 });

@@ -39,11 +39,12 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export const INTRADAY_INTERVALS: Record<
   IntradayDateRange,
-  { interval: '1m' | '5m' | '30m'; intervalInMs: number }
+  { interval: '5m' | '15m' | '60m'; intervalInMs: number }
 > = {
-  '1d': { interval: '1m', intervalInMs: 60 * 1000 },
-  mtd: { interval: '30m', intervalInMs: 30 * 60 * 1000 },
-  wtd: { interval: '5m', intervalInMs: 5 * 60 * 1000 }
+  // About 200 to 400 points per chart, as on the charts of the brokers
+  '1d': { interval: '5m', intervalInMs: 5 * 60 * 1000 },
+  mtd: { interval: '60m', intervalInMs: 60 * 60 * 1000 },
+  wtd: { interval: '15m', intervalInMs: 15 * 60 * 1000 }
 };
 
 function getDayKey(aTime: number) {

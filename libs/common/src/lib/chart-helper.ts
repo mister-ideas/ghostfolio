@@ -12,7 +12,7 @@ import type {
   TooltipPosition
 } from 'chart.js';
 import type { AnnotationOptions } from 'chartjs-plugin-annotation';
-import { addDays, format } from 'date-fns';
+import { addDays, format, startOfWeek } from 'date-fns';
 
 import { secondaryColorRgb } from './config';
 import {
@@ -87,13 +87,22 @@ export function getChartElementsOptions(
  * date range with a fixed end (the current year), the remaining trading days
  * without a value, so that the chart shows the whole period
  */
+function getWeekKey(aDate?: Date) {
+  return aDate
+    ? format(startOfWeek(aDate, { weekStartsOn: 1 }), DATE_FORMAT)
+    : '';
+}
+
 export function getTradingDayItems<T extends { date: string }>({
   dateRange,
   items,
+  maxItems = 400,
   now = new Date()
 }: {
   dateRange?: DateRange;
   items: T[];
+  /** Above, one point per week (the last trading day) is kept */
+  maxItems?: number;
   now?: Date;
 }): (T | { date: string; value: null })[] {
   const isWeekend = (aDate: Date) => {
@@ -107,6 +116,20 @@ export function getTradingDayItems<T extends { date: string }>({
       return !parsedDate || !isWeekend(parsedDate);
     }
   );
+
+  if (result.length > maxItems) {
+    const weekly = result.filter(({ date }, index) => {
+      const next = result[index + 1];
+
+      return (
+        index === 0 ||
+        !next ||
+        getWeekKey(parseDate(date)) !== getWeekKey(parseDate(next.date))
+      );
+    });
+
+    result.splice(0, result.length, ...weekly);
+  }
 
   let end: Date | undefined;
   let start: Date | undefined;

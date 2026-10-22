@@ -15,7 +15,7 @@ export interface PortfolioIntradayResponse {
   /** Change of the portfolio since the start of the date range */
   chart: PortfolioIntradayItem[];
 
-  interval: '1m' | '5m' | '30m';
+  interval: '5m' | '15m' | '60m';
 
   /** Whether a market (including the pre-market and the post-market) of a holding is open */
   isMarketOpen: boolean;
