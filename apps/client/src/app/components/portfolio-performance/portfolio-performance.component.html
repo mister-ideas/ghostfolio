@@ -42,14 +42,18 @@
           [colorizeSign]="true"
           [isCurrency]="true"
           [isLoading]="isLoading()"
+          [isMarketOpen]="isMarketOpen()"
           [locale]="locale()"
           [value]="performance()?.netPerformanceWithCurrencyEffect"
         />
       </div>
       <div class="col">
+        <!-- Highlighted together with the absolute change -->
         <gf-value
           [colorizeSign]="true"
+          [flashValue]="performance()?.netPerformanceWithCurrencyEffect"
           [isLoading]="isLoading()"
+          [isMarketOpen]="isMarketOpen()"
           [isPercent]="true"
           [locale]="locale()"
           [value]="performance()?.netPerformancePercentageWithCurrencyEffect"

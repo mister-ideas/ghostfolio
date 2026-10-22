@@ -42,13 +42,26 @@
       [class.justify-content-end]="position === 'end'"
     >
       @if (isNumber || value === null) {
-        <div class="align-items-center d-flex gf-value-line">
+        <div
+          class="align-items-center d-flex gf-value-line"
+          [ngClass]="trendColorClass"
+        >
           @if (colorizeSign && !useAbsoluteValue && value !== null) {
             @if (+value > 0) {
-              <div class="me-1 text-success">+</div>
+              <div
+                class="me-1"
+                [class.text-success]="isMarketOpen === undefined"
+              >
+                +
+              </div>
             }
             @if (+value < 0) {
-              <div class="me-1 text-danger">-</div>
+              <div
+                class="me-1"
+                [class.text-danger]="isMarketOpen === undefined"
+              >
+                -
+              </div>
             }
           }
           <div

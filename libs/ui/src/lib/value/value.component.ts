@@ -40,10 +40,23 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() colorizeSign = false;
   @Input() deviceType: string;
   @Input() enableCopyToClipboardButton = false;
+
+  /**
+   * Number which triggers the highlight of a change instead of the value,
+   * e.g. the absolute change for a change in percent which is displayed
+   * with fewer digits
+   */
+  @Input() flashValue?: number | null;
   @Input() icon = '';
   @Input() isAbsolute = false;
   @Input() isCurrency = false;
   @Input() isDate = false;
+
+  /**
+   * Colors the whole figure (with `colorizeSign`) in green or red while the
+   * market is open and in grey while it is closed
+   */
+  @Input() isMarketOpen?: boolean;
   @Input() isPercent = false;
   @Input() locale?: string;
   @Input() position = '';
@@ -92,6 +105,26 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
     };
   });
 
+  protected get trendColorClass() {
+    if (
+      !this.colorizeSign ||
+      this.isMarketOpen === undefined ||
+      !isNumber(this.value)
+    ) {
+      return '';
+    }
+
+    if (!this.isMarketOpen) {
+      return 'text-body-secondary';
+    }
+
+    if (this.value > 0) {
+      return 'text-success';
+    }
+
+    return this.value < 0 ? 'text-danger' : '';
+  }
+
   private get hasPrecision() {
     const precision = this.precision();
     return precision !== undefined && precision >= 0;
@@ -102,7 +135,8 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
    * has changed, e.g. after a background refresh.
    */
   private flashOnChange(changes?: SimpleChanges) {
-    const change = changes?.['value'];
+    const hasFlashValue = this.flashValue !== undefined;
+    const change = changes?.[hasFlashValue ? 'flashValue' : 'value'];
 
     if (!change || change.firstChange || this.isLoading()) {
       return;
@@ -110,9 +144,10 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     const direction = getValueChangeDirection({
       currentValue: change.currentValue,
-      digits:
-        ((this.hasPrecision ? this.precision() : 2) ?? 2) +
-        (this.isPercent ? 2 : 0),
+      digits: hasFlashValue
+        ? 2
+        : ((this.hasPrecision ? this.precision() : 2) ?? 2) +
+          (this.isPercent ? 2 : 0),
       previousValue: change.previousValue
     });
 
