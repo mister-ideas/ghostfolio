@@ -181,11 +181,10 @@ export class GfBenchmarkComparatorComponent implements OnChanges, OnDestroy {
             borderColor: color,
             borderWidth: 2,
             data: this.performanceDataItems().map(({ date }) => {
-              const value = valuesByDate[date];
-
               return {
                 x: parseDate(date)?.getTime() ?? null,
-                y: value === null || value === undefined ? null : value * 100
+                // The benchmarks are already in percent
+                y: valuesByDate[date] ?? null
               };
             }),
             label: name ?? $localize`Benchmark`

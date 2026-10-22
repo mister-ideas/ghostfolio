@@ -589,7 +589,10 @@ export class GfAnalysisPageComponent implements OnInit {
         ? [
             {
               id,
-              items: series.items,
+              // The daily benchmarks are in percent
+              items: series.items.map(({ date, value }) => {
+                return { date, value: value === null ? null : value * 100 };
+              }),
               name: profile?.name ?? profile?.symbol ?? id
             }
           ]
