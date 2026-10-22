@@ -4,18 +4,20 @@ import { LayoutService } from '@ghostfolio/client/core/layout.service';
 import { AutoRefreshService } from '@ghostfolio/client/services/auto-refresh/auto-refresh.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { getTradingDayItems } from '@ghostfolio/common/chart-helper';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_USER_DATE_RANGE,
   DEFAULT_LOCALE,
   NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
 } from '@ghostfolio/common/config';
+import { isIntradayDateRange } from '@ghostfolio/common/date-range.helper';
 import { isCashPosition } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
-  HistoricalDataItem,
-  LineChartItem,
+  NullableLineChartItem,
   PortfolioPerformance,
+  PortfolioPerformanceResponse,
   PortfolioPosition,
   User
 } from '@ghostfolio/common/interfaces';
@@ -41,12 +43,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { Router, RouterModule } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
-import { catchError, EMPTY, exhaustMap, filter } from 'rxjs';
-
 import {
-  getIntradayChartItems,
-  recordIntradaySample
-} from './intraday-samples';
+  catchError,
+  EMPTY,
+  exhaustMap,
+  filter,
+  forkJoin,
+  map,
+  Observable,
+  of
+} from 'rxjs';
 
 const MINIMUM_CHART_ITEMS = 3;
 
@@ -68,21 +74,32 @@ const MINIMUM_CHART_ITEMS = 3;
 export class GfHomeOverviewComponent implements OnInit {
   protected readonly errors = signal<AssetProfileIdentifier[]>([]);
   protected readonly hasImpersonationId = signal(false);
-  protected readonly defaultDateRange = DEFAULT_USER_DATE_RANGE;
-  protected readonly historicalDataItems = signal<LineChartItem[] | null>(null);
+  protected readonly historicalDataItems = signal<
+    NullableLineChartItem[] | null
+  >(null);
 
   // A line through only two points (e.g. the close of the previous day and
   // now) is drawn as a misleading slope across the whole width
   protected readonly hasEnoughChartData = computed(() => {
-    const dateRange = this.user()?.settings?.dateRange;
-    const minimum = dateRange === '1d' ? 1 : MINIMUM_CHART_ITEMS;
+    const minimum = isIntradayDateRange(this.dateRange())
+      ? 1
+      : MINIMUM_CHART_ITEMS;
 
-    return (this.historicalDataItems()?.length ?? 0) >= minimum;
+    return (
+      (this.historicalDataItems() ?? []).filter(({ value }) => {
+        return value !== null;
+      }).length >= minimum
+    );
   });
   protected readonly holdings = signal<PortfolioPosition[] | undefined>(
     undefined
   );
   protected readonly isLoadingPerformance = signal(true);
+  protected readonly isMarketOpen = signal<boolean | undefined>(undefined);
+
+  protected readonly dateRange = computed<DateRange>(() => {
+    return this.user()?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE;
+  });
 
   protected readonly locale = computed(() => {
     return this.user()?.settings?.locale ?? DEFAULT_LOCALE;
@@ -178,22 +195,24 @@ export class GfHomeOverviewComponent implements OnInit {
       .pipe(
         filter(() => !!this.user() && !this.isLoadingPerformance()),
         exhaustMap(() => {
-          return this.dataService
-            .fetchPortfolioPerformance({
-              range: this.user()?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
+          const dateRange = this.dateRange();
+
+          return forkJoin({
+            chart: this.fetchChartItems(dateRange),
+            response: this.dataService.fetchPortfolioPerformance({
+              range: dateRange
             })
-            .pipe(catchError(() => EMPTY));
+          }).pipe(catchError(() => EMPTY));
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ chart, errors, performance }) => {
-        this.errors.set(errors ?? []);
-        this.performance.set(performance);
+      .subscribe(({ chart, response }) => {
+        this.setPerformance(response);
 
-        if (this.user()?.settings?.dateRange === '1d') {
-          // Extend the chart of the day with the new value
-          this.setChartItems({ chart, dateRange: '1d' });
-        }
+        // Same series: the line chart moves without the drawing animation
+        this.historicalDataItems.set(
+          chart ?? this.getDailyChartItems(response)
+        );
 
         this.autoRefreshService.markUpdated();
       });
@@ -237,35 +256,48 @@ export class GfHomeOverviewComponent implements OnInit {
     });
   }
 
-  private setChartItems({
-    chart,
-    dateRange
-  }: {
-    chart?: HistoricalDataItem[];
-    dateRange?: DateRange;
-  }) {
-    const items =
-      chart?.map(({ date, netPerformanceInPercentageWithCurrencyEffect }) => {
-        return {
-          date,
-          value: (netPerformanceInPercentageWithCurrencyEffect ?? 0) * 100
-        };
-      }) ?? null;
-
-    const latest = items?.at(-1);
-
-    if ((dateRange ?? DEFAULT_USER_DATE_RANGE) === '1d' && latest) {
-      // There is only one value per day on the server: draw the day from the
-      // close of the previous day to the samples recorded on this device
-      this.historicalDataItems.set(
-        getIntradayChartItems({
-          baseline: items?.[0]?.value ?? 0,
-          samples: recordIntradaySample({ value: latest.value })
-        })
-      );
-    } else {
-      this.historicalDataItems.set(items);
+  private fetchChartItems(
+    aDateRange: DateRange
+  ): Observable<NullableLineChartItem[] | null> {
+    if (!isIntradayDateRange(aDateRange)) {
+      // The daily chart is part of the performance response
+      return of(null);
     }
+
+    return this.dataService.fetchPortfolioIntraday({ range: aDateRange }).pipe(
+      map(({ chart }) => {
+        return chart.map(({ date, value }) => {
+          return { date, value: value === null ? null : value * 100 };
+        });
+      }),
+      // Fall back to the daily chart
+      catchError(() => of(null))
+    );
+  }
+
+  private getDailyChartItems({
+    chart
+  }: PortfolioPerformanceResponse): NullableLineChartItem[] {
+    return getTradingDayItems({
+      dateRange: this.dateRange(),
+      items:
+        chart?.map(({ date, netPerformanceInPercentageWithCurrencyEffect }) => {
+          return {
+            date,
+            value: (netPerformanceInPercentageWithCurrencyEffect ?? 0) * 100
+          };
+        }) ?? []
+    });
+  }
+
+  private setPerformance({
+    errors,
+    isMarketOpen,
+    performance
+  }: PortfolioPerformanceResponse) {
+    this.errors.set(errors ?? []);
+    this.isMarketOpen.set(isMarketOpen);
+    this.performance.set(performance);
   }
 
   private update() {
@@ -288,16 +320,22 @@ export class GfHomeOverviewComponent implements OnInit {
         });
     }
 
-    this.dataService
-      .fetchPortfolioPerformance({
-        range: userSettings?.dateRange ?? DEFAULT_USER_DATE_RANGE
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ chart, errors, performance }) => {
-        this.errors.set(errors ?? []);
-        this.performance.set(performance);
+    const dateRange = this.dateRange();
 
-        this.setChartItems({ chart, dateRange: userSettings?.dateRange });
+    forkJoin({
+      chart: this.fetchChartItems(dateRange),
+      response: this.dataService.fetchPortfolioPerformance({
+        range: dateRange
+      })
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ chart, response }) => {
+        const { performance } = response;
+
+        this.setPerformance(response);
+        this.historicalDataItems.set(
+          chart ?? this.getDailyChartItems(response)
+        );
 
         this.precision.set(2);
 

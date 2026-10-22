@@ -2,10 +2,12 @@ import { GfBenchmarkComparatorComponent } from '@ghostfolio/client/components/be
 import { GfDateRangeSelectorComponent } from '@ghostfolio/client/components/date-range-selector/date-range-selector.component';
 import { AutoRefreshService } from '@ghostfolio/client/services/auto-refresh/auto-refresh.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { getTradingDayItems } from '@ghostfolio/common/chart-helper';
 import {
   DEFAULT_USER_DATE_RANGE,
   NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
 } from '@ghostfolio/common/config';
+import { isIntradayDateRange } from '@ghostfolio/common/date-range.helper';
 import { SubscriptionType } from '@ghostfolio/common/enums';
 import {
   canOpenHoldingDetail,
@@ -15,6 +17,8 @@ import {
   BenchmarkSeries,
   InvestmentItem,
   LineChartItem,
+  NullableLineChartItem,
+  PortfolioIntradayResponse,
   PortfolioInvestmentsResponse,
   PortfolioPerformance,
   PortfolioPosition,
@@ -24,6 +28,7 @@ import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { hasScope, scopes } from '@ghostfolio/common/scopes';
 import type {
   AiPromptMode,
+  DateRange,
   GroupBy,
   ToggleOption
 } from '@ghostfolio/common/types';
@@ -69,6 +74,7 @@ import {
   filter,
   forkJoin,
   map,
+  Observable,
   of,
   Subscription
 } from 'rxjs';
@@ -119,10 +125,12 @@ export class GfAnalysisPageComponent implements OnInit {
     { label: $localize`Monthly`, value: 'month' },
     { label: $localize`Yearly`, value: 'year' }
   ];
+  protected readonly defaultDateRange = DEFAULT_USER_DATE_RANGE;
+  protected isMarketOpen: boolean | undefined;
   protected performance: PortfolioPerformance;
   protected readonly PerformanceCalculationType = PerformanceCalculationType;
   protected performanceDataItems: LineChartItem[];
-  protected performanceDataItemsInPercentage: LineChartItem[];
+  protected performanceDataItemsInPercentage: NullableLineChartItem[];
   protected performancePercentagesByYear: InvestmentItem[];
   protected readonly performanceTimelineDataLabel = $localize`Net Performance`;
   protected readonly portfolioEvolutionDataLabel = $localize`Invested Capital`;
@@ -205,6 +213,7 @@ export class GfAnalysisPageComponent implements OnInit {
               ],
               range: this.user?.settings?.dateRange
             }),
+            intraday: this.fetchIntraday(),
             performance: this.dataService.fetchPortfolioPerformance({
               filters: this.userService.getFilters(),
               range: this.user?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
@@ -213,8 +222,14 @@ export class GfAnalysisPageComponent implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ holdings: { holdings }, performance }) => {
+      .subscribe(({ holdings: { holdings }, intraday, performance }) => {
+        this.isMarketOpen = performance.isMarketOpen;
         this.performance = performance.performance;
+
+        if (intraday) {
+          // Same series: the chart moves without the drawing animation
+          this.setIntradayComparatorItems(intraday);
+        }
 
         this.updateTopAndBottomHoldings(holdings);
 
@@ -438,64 +453,73 @@ export class GfAnalysisPageComponent implements OnInit {
         range: this.user?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ chart, dateOfFirstActivity, performance }) => {
-        this.dateOfFirstActivity = dateOfFirstActivity ?? new Date();
+      .subscribe(
+        ({ chart, dateOfFirstActivity, isMarketOpen, performance }) => {
+          this.dateOfFirstActivity = dateOfFirstActivity ?? new Date();
+          this.isMarketOpen = isMarketOpen;
 
-        this.investments = [];
-        this.performance = performance;
-        this.performanceDataItems = [];
-        this.performanceDataItemsInPercentage = [];
+          this.investments = [];
+          this.performance = performance;
+          this.performanceDataItems = [];
+          this.performanceDataItemsInPercentage = [];
 
-        for (const {
-          date,
-          dividendInPercentageWithCurrencyEffect,
-          netPerformanceInPercentageWithCurrencyEffect,
-          totalInvestmentValueWithCurrencyEffect,
-          valueInPercentage,
-          valueWithCurrencyEffect
-        } of chart ?? []) {
-          if (totalInvestmentValueWithCurrencyEffect !== undefined) {
-            this.investments.push({
-              date,
-              investment: totalInvestmentValueWithCurrencyEffect
-            });
+          for (const {
+            date,
+            dividendInPercentageWithCurrencyEffect,
+            netPerformanceInPercentageWithCurrencyEffect,
+            totalInvestmentValueWithCurrencyEffect,
+            valueInPercentage,
+            valueWithCurrencyEffect
+          } of chart ?? []) {
+            if (totalInvestmentValueWithCurrencyEffect !== undefined) {
+              this.investments.push({
+                date,
+                investment: totalInvestmentValueWithCurrencyEffect
+              });
+            }
+
+            const value = isNumber(valueWithCurrencyEffect)
+              ? valueWithCurrencyEffect
+              : valueInPercentage;
+
+            if (isNumber(value)) {
+              this.performanceDataItems.push({
+                date,
+                value
+              });
+            }
+
+            if (isNumber(netPerformanceInPercentageWithCurrencyEffect)) {
+              this.performanceDataItemsInPercentage.push({
+                date,
+                value:
+                  netPerformanceInPercentageWithCurrencyEffect -
+                  (dividendInPercentageWithCurrencyEffect ?? 0)
+              });
+            }
           }
 
-          const value = isNumber(valueWithCurrencyEffect)
-            ? valueWithCurrencyEffect
-            : valueInPercentage;
-
-          if (isNumber(value)) {
-            this.performanceDataItems.push({
-              date,
-              value
-            });
+          if (
+            this.deviceType() === 'mobile' &&
+            this.performance.currentValueInBaseCurrency >=
+              NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+          ) {
+            this.precision = 0;
           }
 
-          if (isNumber(netPerformanceInPercentageWithCurrencyEffect)) {
-            this.performanceDataItemsInPercentage.push({
-              date,
-              value:
-                netPerformanceInPercentageWithCurrencyEffect -
-                (dividendInPercentageWithCurrencyEffect ?? 0)
-            });
-          }
+          // Only the trading days, and the remaining ones of the current year
+          this.performanceDataItemsInPercentage = getTradingDayItems({
+            dateRange: this.dateRange,
+            items: this.performanceDataItemsInPercentage
+          });
+
+          this.isLoadingInvestmentChart = false;
+
+          this.updateBenchmarkDataItems();
+
+          this.changeDetectorRef.markForCheck();
         }
-
-        if (
-          this.deviceType() === 'mobile' &&
-          this.performance.currentValueInBaseCurrency >=
-            NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
-        ) {
-          this.precision = 0;
-        }
-
-        this.isLoadingInvestmentChart = false;
-
-        this.updateBenchmarkDataItems();
-
-        this.changeDetectorRef.markForCheck();
-      });
+      );
 
     this.dataService
       .fetchPortfolioHoldings({
@@ -524,11 +548,80 @@ export class GfAnalysisPageComponent implements OnInit {
     this.changeDetectorRef.markForCheck();
   }
 
+  private get dateRange(): DateRange {
+    return this.user?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE;
+  }
+
+  /**
+   * The current day, week and month are drawn from intraday prices
+   */
+  private fetchIntraday(): Observable<PortfolioIntradayResponse | null> {
+    const dateRange = this.dateRange;
+
+    if (!isIntradayDateRange(dateRange)) {
+      return of(null);
+    }
+
+    return this.dataService
+      .fetchPortfolioIntraday({
+        benchmarks: this.selectedBenchmarkIds,
+        range: dateRange
+      })
+      .pipe(catchError(() => of(null)));
+  }
+
+  private setIntradayComparatorItems({
+    benchmarks,
+    chart
+  }: PortfolioIntradayResponse) {
+    this.performanceDataItemsInPercentage = chart;
+
+    this.benchmarkSeries = this.selectedBenchmarkIds.flatMap((id) => {
+      const series = benchmarks.find((benchmark) => {
+        return benchmark.id === id;
+      });
+
+      const profile = this.benchmarks.find((benchmark) => {
+        return benchmark.id === id;
+      });
+
+      return series
+        ? [
+            {
+              id,
+              items: series.items,
+              name: profile?.name ?? profile?.symbol ?? id
+            }
+          ]
+        : [];
+    });
+
+    this.changeDetectorRef.markForCheck();
+  }
+
   private updateBenchmarkDataItems() {
     // Discard the pending requests of a previous selection
     this.benchmarkSeriesSubscription?.unsubscribe();
 
     this.benchmarkSeries = [];
+
+    if (isIntradayDateRange(this.dateRange)) {
+      this.isLoadingBenchmarkComparator = true;
+
+      this.benchmarkSeriesSubscription = this.fetchIntraday()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((intraday) => {
+          if (intraday) {
+            this.setIntradayComparatorItems(intraday);
+          }
+
+          this.isLoadingBenchmarkComparator = false;
+
+          this.changeDetectorRef.markForCheck();
+        });
+
+      return;
+    }
 
     const selectedBenchmarks = this.benchmarks.filter(
       (benchmark): benchmark is BenchmarkProfile => {

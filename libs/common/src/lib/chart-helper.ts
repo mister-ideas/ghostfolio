@@ -12,17 +12,7 @@ import type {
   TooltipPosition
 } from 'chart.js';
 import type { AnnotationOptions } from 'chartjs-plugin-annotation';
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  endOfYear,
-  format,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-  startOfYear
-} from 'date-fns';
+import { addDays, format } from 'date-fns';
 
 import { secondaryColorRgb } from './config';
 import {
@@ -32,7 +22,8 @@ import {
   getBackgroundColor,
   getDateFormatString,
   getLocale,
-  getTextColor
+  getTextColor,
+  parseDate
 } from './helper';
 import { ColorScheme, DateRange, GroupBy } from './types';
 
@@ -91,69 +82,173 @@ export function getChartElementsOptions(
  * length of the date range: days up to a month, months up to a year and years
  * above
  */
+/**
+ * Returns the daily items of the trading days (Monday to Friday) and, for a
+ * date range with a fixed end (the current year), the remaining trading days
+ * without a value, so that the chart shows the whole period
+ */
+export function getTradingDayItems<T extends { date: string }>({
+  dateRange,
+  items,
+  now = new Date()
+}: {
+  dateRange?: DateRange;
+  items: T[];
+  now?: Date;
+}): (T | { date: string; value: null })[] {
+  const isWeekend = (aDate: Date) => {
+    return aDate.getDay() === 0 || aDate.getDay() === 6;
+  };
+
+  const result: (T | { date: string; value: null })[] = items.filter(
+    ({ date }) => {
+      const parsedDate = parseDate(date);
+
+      return !parsedDate || !isWeekend(parsedDate);
+    }
+  );
+
+  let end: Date | undefined;
+  let start: Date | undefined;
+
+  if (dateRange === 'ytd') {
+    end = new Date(now.getFullYear(), 11, 31);
+    start = new Date(now.getFullYear(), 0, 1);
+  } else if (/^\d{4}$/.test(dateRange ?? '')) {
+    end = new Date(Number(dateRange), 11, 31);
+    start = new Date(Number(dateRange), 0, 1);
+  }
+
+  const firstDate = result[0] ? parseDate(result[0].date) : undefined;
+
+  if (start && firstDate && firstDate < start) {
+    // The baseline (the close of the previous year) is shown at the start
+    result[0] = { ...result[0], date: format(start, DATE_FORMAT) };
+  }
+
+  const lastDate = items.at(-1)?.date;
+  const last = lastDate ? parseDate(lastDate) : undefined;
+
+  if (end && last) {
+    for (
+      let date = addDays(last, 1);
+      date.getTime() <= end.getTime();
+      date = addDays(date, 1)
+    ) {
+      if (!isWeekend(date)) {
+        result.push({ date: format(date, DATE_FORMAT), value: null });
+      }
+    }
+  }
+
+  return result;
+}
+
 export function getTimeAxisUnit(
   aDateRange?: DateRange
-): 'day' | 'hour' | 'month' | 'year' {
+): 'day' | 'hour' | 'month' | 'year' | false {
   switch (aDateRange) {
+    case undefined:
+      return 'year';
     case '1d':
       return 'hour';
     case 'mtd':
     case 'wtd':
       return 'day';
+    case '1y':
     case '5y':
     case 'max':
-    case undefined:
-      return 'year';
+      // Chosen by the chart according to the length of the period
+      return false;
     default:
-      // 'ytd', '1y' and single years
+      // 'ytd' and single years
       return 'month';
   }
 }
 
+const TIME_SERIES_LABEL_FORMATS = {
+  day: 'EEE d',
+  hour: 'HH:mm',
+  month: 'MMM',
+  year: 'yyyy'
+} as const;
+
 /**
- * Returns the bounds of the time axis for the date ranges which have a fixed
- * end (the current week, month or year), so that the chart shows the whole
- * period with the part still to come left empty. Other date ranges (rolling
- * periods and `max`) end at the latest data point.
+ * Returns the labels of an axis with equidistant points (without the closed
+ * markets): a label at the first point of a period (hour, day, month or
+ * year), thinned out to at most a few labels
  */
-export function getTimeAxisBounds(
-  aDateRange?: DateRange,
-  aReferenceDate = new Date()
-): { max?: number; min?: number } {
-  switch (aDateRange) {
-    case '1d':
-      return {
-        max: endOfDay(aReferenceDate).getTime(),
-        min: startOfDay(aReferenceDate).getTime()
-      };
-    case 'wtd':
-      return {
-        max: endOfWeek(aReferenceDate, { weekStartsOn: 1 }).getTime(),
-        min: startOfWeek(aReferenceDate, { weekStartsOn: 1 }).getTime()
-      };
-    case 'mtd':
-      return {
-        max: endOfMonth(aReferenceDate).getTime(),
-        min: startOfMonth(aReferenceDate).getTime()
-      };
-    case 'ytd':
-      return {
-        max: endOfYear(aReferenceDate).getTime(),
-        min: startOfYear(aReferenceDate).getTime()
-      };
-    default: {
-      if (typeof aDateRange === 'string' && /^\d{4}$/.test(aDateRange)) {
-        const year = new Date(Number(aDateRange), 0, 1);
+export function getTimeSeriesTickCallback(
+  aUnit: 'day' | 'hour' | 'month' | 'year' | false,
+  aMaxLabels = 7
+) {
+  let cache: { key: string; labels: Map<number, string> } | undefined;
 
-        return {
-          max: endOfYear(year).getTime(),
-          min: startOfYear(year).getTime()
-        };
-      }
+  return (
+    _value: number | string,
+    index: number,
+    ticks: { value: number }[]
+  ) => {
+    const key = `${ticks.length}-${ticks[0]?.value}-${ticks.at(-1)?.value}`;
 
-      return {};
+    if (cache?.key !== key) {
+      const span = (ticks.at(-1)?.value ?? 0) - (ticks[0]?.value ?? 0);
+      const unit =
+        aUnit ||
+        (span > 3 * 365 * 24 * 60 * 60 * 1000
+          ? 'year'
+          : span > 45 * 24 * 60 * 60 * 1000
+            ? 'month'
+            : 'day');
+
+      const getPeriod = (aTime: number) => {
+        const date = new Date(aTime);
+
+        switch (unit) {
+          case 'hour':
+            return `${date.toDateString()} ${date.getHours()}`;
+          case 'month':
+            return `${date.getFullYear()}-${date.getMonth()}`;
+          default:
+            return `${date.getFullYear()}`;
+        }
+      };
+
+      // The first point of each period
+      const starts: number[] = [];
+
+      ticks.forEach(({ value }, tickIndex) => {
+        const previous = ticks[tickIndex - 1]?.value;
+
+        if (
+          tickIndex === 0 ||
+          (unit === 'day'
+            ? // A trading day starts after the closed market (the post-market
+              // can last after midnight)
+              value - previous > 2 * 60 * 60 * 1000
+            : getPeriod(value) !== getPeriod(previous))
+        ) {
+          starts.push(tickIndex);
+        }
+      });
+
+      const step = Math.max(1, Math.ceil(starts.length / aMaxLabels));
+      const labels = new Map<number, string>();
+
+      starts.forEach((tickIndex, startIndex) => {
+        if (startIndex % step === 0) {
+          labels.set(
+            tickIndex,
+            format(ticks[tickIndex].value, TIME_SERIES_LABEL_FORMATS[unit])
+          );
+        }
+      });
+
+      cache = { key, labels };
     }
-  }
+
+    return cache.labels.get(index) ?? '';
+  };
 }
 
 export function getTimeAxisOptions({
@@ -161,18 +256,19 @@ export function getTimeAxisOptions({
   colorScheme,
   display = true,
   locale = getLocale(),
-  max,
-  min,
-  unit = 'year'
+  type = 'time',
+  unit = 'year',
+  withTime = false
 }: {
   borderWidth?: number;
   colorScheme?: ColorScheme;
   display?: boolean;
   locale?: string;
-  max?: number;
-  min?: number;
-  unit?: 'day' | 'hour' | 'month' | 'year';
-}): ScaleOptions<'time'> {
+  type?: 'time' | 'timeseries';
+  unit?: 'day' | 'hour' | 'month' | 'year' | false;
+  /** Whether the points are intraday (the tooltip shows the time) */
+  withTime?: boolean;
+}): ScaleOptions<'time' | 'timeseries'> {
   return {
     display,
     border: {
@@ -182,18 +278,36 @@ export function getTimeAxisOptions({
     grid: {
       display: false
     },
-    max,
-    min,
-    ticks: {
-      autoSkip: true,
-      maxRotation: 0,
-      maxTicksLimit: 6
-    },
+    ticks:
+      type === 'timeseries'
+        ? {
+            // A label at the first point of an hour, day, month or year
+            autoSkip: false,
+            callback: getTimeSeriesTickCallback(unit),
+            maxRotation: 0,
+            source: 'data'
+          }
+        : {
+            autoSkip: true,
+            maxRotation: 0,
+            maxTicksLimit: 6
+          },
     time: {
-      tooltipFormat: unit === 'hour' ? 'HH:mm' : getDateFormatString(locale),
+      tooltipFormat: withTime
+        ? unit === 'hour'
+          ? 'HH:mm'
+          : `${getDateFormatString(locale)} HH:mm`
+        : getDateFormatString(locale),
+      displayFormats: {
+        day: 'EEE d',
+        hour: 'HH:mm',
+        month: unit === 'month' ? 'MMM' : 'MMM yy',
+        week: 'd MMM',
+        year: 'yyyy'
+      },
       unit
     },
-    type: 'time'
+    type
   };
 }
 

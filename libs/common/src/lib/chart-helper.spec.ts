@@ -1,4 +1,8 @@
-import { getTimeAxisBounds, getTimeAxisUnit } from './chart-helper';
+import {
+  getTimeAxisUnit,
+  getTimeSeriesTickCallback,
+  getTradingDayItems
+} from './chart-helper';
 
 describe('getTimeAxisUnit', () => {
   it.each([
@@ -6,61 +10,104 @@ describe('getTimeAxisUnit', () => {
     ['wtd', 'day'],
     ['mtd', 'day'],
     ['ytd', 'month'],
-    ['1y', 'month'],
+    ['1y', false],
     ['2025', 'month'],
-    ['5y', 'year'],
-    ['max', 'year'],
+    ['5y', false],
+    ['max', false],
     [undefined, 'year']
   ])('uses the unit of %s', (dateRange, unit) => {
     expect(getTimeAxisUnit(dateRange)).toBe(unit);
   });
 });
 
-describe('getTimeAxisBounds', () => {
-  const reference = new Date(2026, 9, 21, 15, 30);
+describe('getTradingDayItems', () => {
+  // Thursday
+  const now = new Date(2026, 11, 24);
 
-  it('spans the whole current year for ytd', () => {
-    const { max, min } = getTimeAxisBounds('ytd', reference);
+  it('skips the weekends', () => {
+    const items = getTradingDayItems({
+      dateRange: '1y',
+      now,
+      items: [
+        { date: '2026-12-18', value: 1 },
+        { date: '2026-12-19', value: 1 },
+        { date: '2026-12-20', value: 1 },
+        { date: '2026-12-21', value: 2 }
+      ]
+    });
 
-    expect(new Date(min).toDateString()).toBe(
-      new Date(2026, 0, 1).toDateString()
-    );
-    expect(new Date(max).toDateString()).toBe(
-      new Date(2026, 11, 31).toDateString()
-    );
+    expect(items.map(({ date }) => date)).toEqual(['2026-12-18', '2026-12-21']);
   });
 
-  it('spans the whole current month for mtd', () => {
-    const { max, min } = getTimeAxisBounds('mtd', reference);
+  it('adds the remaining trading days of the year', () => {
+    const items = getTradingDayItems({
+      dateRange: 'ytd',
+      now,
+      items: [{ date: '2026-12-24', value: 1 }]
+    });
 
-    expect(new Date(min).getDate()).toBe(1);
-    expect(new Date(max).getDate()).toBe(31);
+    expect(items).toEqual([
+      { date: '2026-12-24', value: 1 },
+      { date: '2026-12-25', value: null },
+      { date: '2026-12-28', value: null },
+      { date: '2026-12-29', value: null },
+      { date: '2026-12-30', value: null },
+      { date: '2026-12-31', value: null }
+    ]);
+  });
+});
+
+describe('getTimeSeriesTickCallback', () => {
+  it('labels the first point of each hour', () => {
+    const ticks = [
+      new Date(2026, 9, 22, 9, 0),
+      new Date(2026, 9, 22, 9, 30),
+      new Date(2026, 9, 22, 10, 0),
+      new Date(2026, 9, 22, 10, 30)
+    ].map((date) => {
+      return { value: date.getTime() };
+    });
+
+    const callback = getTimeSeriesTickCallback('hour');
+
+    expect(
+      ticks.map(({ value }, index) => {
+        return callback(value, index, ticks);
+      })
+    ).toEqual(['09:00', '', '10:00', '']);
   });
 
-  it('spans the whole current week for wtd', () => {
-    const { max, min } = getTimeAxisBounds('wtd', reference);
+  it('labels the start of each trading day, also after a post-market past midnight', () => {
+    const ticks = [
+      new Date(2026, 9, 22, 21, 0),
+      new Date(2026, 9, 22, 23, 0),
+      new Date(2026, 9, 23, 1, 0),
+      new Date(2026, 9, 23, 9, 0)
+    ].map((date) => {
+      return { value: date.getTime() };
+    });
 
-    expect(new Date(min).getDay()).toBe(1);
-    expect(new Date(max).getDay()).toBe(0);
+    const callback = getTimeSeriesTickCallback('day');
+
+    expect(
+      ticks.map(({ value }, index) => {
+        return callback(value, index, ticks);
+      })
+    ).toEqual(['Thu 22', '', '', 'Fri 23']);
   });
 
-  it('spans the whole current day for 1d', () => {
-    const { max, min } = getTimeAxisBounds('1d', reference);
+  it('thins out the labels', () => {
+    const ticks = Array.from({ length: 20 }, (_, index) => {
+      return { value: new Date(2026, 0, 1 + index).getTime() };
+    });
 
-    expect(new Date(min).getHours()).toBe(0);
-    expect(new Date(max).getHours()).toBe(23);
-  });
+    const callback = getTimeSeriesTickCallback('day', 5);
+    const labels = ticks
+      .map(({ value }, index) => {
+        return callback(value, index, ticks);
+      })
+      .filter(Boolean);
 
-  it('spans a past year', () => {
-    const { max, min } = getTimeAxisBounds('2024', reference);
-
-    expect(new Date(min).getFullYear()).toBe(2024);
-    expect(new Date(max).getMonth()).toBe(11);
-  });
-
-  it('does not fix the bounds of rolling ranges', () => {
-    expect(getTimeAxisBounds('1y', reference)).toEqual({});
-    expect(getTimeAxisBounds('5y', reference)).toEqual({});
-    expect(getTimeAxisBounds('max', reference)).toEqual({});
+    expect(labels.length).toBeLessThanOrEqual(5);
   });
 });
