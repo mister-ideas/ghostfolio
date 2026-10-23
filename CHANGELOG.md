@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a dashed baseline (0 %) to the performance chart on the overview page and made the zero line of the benchmark comparator and the investment chart dashed and more visible
+- Added a link to the holdings tab in the holdings table on the overview tab of the home page (experimental)
+
 ### Changed
 
 - Changed the default date range of users without a stored date range from `max` to `ytd`

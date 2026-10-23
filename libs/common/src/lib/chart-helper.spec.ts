@@ -1,6 +1,7 @@
 import { addDays, format } from 'date-fns';
 
 import {
+  getBaselineAnnotation,
   getTimeAxisUnit,
   getTimeSeriesTickCallback,
   getTradingDayItems
@@ -137,5 +138,18 @@ describe('getTradingDayItems with many items', () => {
       '2026-01-23',
       '2026-01-30'
     ]);
+  });
+});
+
+describe('getBaselineAnnotation', () => {
+  it('returns a dashed horizontal line at the value', () => {
+    expect(
+      getBaselineAnnotation({ colorScheme: 'LIGHT', value: 0 })
+    ).toMatchObject({
+      borderDash: [4, 4],
+      scaleID: 'y',
+      type: 'line',
+      value: 0
+    });
   });
 });

@@ -71,6 +71,7 @@
           <gf-line-chart
             class="position-absolute"
             unit="%"
+            [baseline]="0"
             [class.pe-3]="deviceType() === 'mobile'"
             [colorScheme]="user()?.settings?.colorScheme"
             [dateRange]="dateRange()"
