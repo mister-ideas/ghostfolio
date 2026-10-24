@@ -40,9 +40,9 @@
       <div class="d-flex col justify-content-end">
         <gf-value
           [colorizeSign]="true"
+          [colorizeValue]="true"
           [isCurrency]="true"
           [isLoading]="isLoading()"
-          [isMarketOpen]="isMarketOpen()"
           [locale]="locale()"
           [value]="performance()?.netPerformanceWithCurrencyEffect"
         />
@@ -51,9 +51,9 @@
         <!-- Highlighted together with the absolute change -->
         <gf-value
           [colorizeSign]="true"
+          [colorizeValue]="true"
           [flashValue]="performance()?.netPerformanceWithCurrencyEffect"
           [isLoading]="isLoading()"
-          [isMarketOpen]="isMarketOpen()"
           [isPercent]="true"
           [locale]="locale()"
           [value]="performance()?.netPerformancePercentageWithCurrencyEffect"

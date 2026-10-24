@@ -95,7 +95,6 @@ export class GfHomeOverviewComponent implements OnInit {
     undefined
   );
   protected readonly isLoadingPerformance = signal(true);
-  protected readonly isMarketOpen = signal<boolean | undefined>(undefined);
 
   protected readonly dateRange = computed<DateRange>(() => {
     return this.user()?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE;
@@ -292,11 +291,9 @@ export class GfHomeOverviewComponent implements OnInit {
 
   private setPerformance({
     errors,
-    isMarketOpen,
     performance
   }: PortfolioPerformanceResponse) {
     this.errors.set(errors ?? []);
-    this.isMarketOpen.set(isMarketOpen);
     this.performance.set(performance);
   }
 

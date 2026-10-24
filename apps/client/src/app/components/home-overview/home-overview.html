@@ -78,6 +78,7 @@
             [hidden]="!hasEnoughChartData()"
             [historicalDataItems]="historicalDataItems()"
             [isAnimated]="true"
+            [isTrendColored]="true"
             [label]="performanceLabel"
             [locale]="locale()"
             [showGradient]="true"
@@ -90,7 +91,6 @@
           <gf-portfolio-performance
             [errors]="errors()"
             [isLoading]="isLoadingPerformance()"
-            [isMarketOpen]="isMarketOpen()"
             [locale]="locale()"
             [performance]="performance()"
             [precision]="precision()"

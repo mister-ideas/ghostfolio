@@ -50,7 +50,9 @@
             @if (+value > 0) {
               <div
                 class="me-1"
-                [class.text-success]="isMarketOpen === undefined"
+                [class.text-success]="
+                  isMarketOpen === undefined && !colorizeValue
+                "
               >
                 +
               </div>
@@ -58,7 +60,9 @@
             @if (+value < 0) {
               <div
                 class="me-1"
-                [class.text-danger]="isMarketOpen === undefined"
+                [class.text-danger]="
+                  isMarketOpen === undefined && !colorizeValue
+                "
               >
                 -
               </div>

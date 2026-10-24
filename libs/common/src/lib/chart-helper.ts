@@ -14,7 +14,7 @@ import type {
 import type { AnnotationOptions } from 'chartjs-plugin-annotation';
 import { addDays, format, startOfWeek } from 'date-fns';
 
-import { secondaryColorRgb } from './config';
+import { primaryColorRgb, secondaryColorRgb } from './config';
 import {
   DATE_FORMAT,
   DATE_FORMAT_MONTHLY,
@@ -45,14 +45,45 @@ export function formatGroupedDate({
 
 // Colors for the lines of the compared benchmarks, the portfolio uses the
 // primary color
+// Without green and red (portfolio) and orange (close to red) first
 const BENCHMARK_COLORS = [
   `rgb(${secondaryColorRgb.r}, ${secondaryColorRgb.g}, ${secondaryColorRgb.b})`,
-  'rgb(255, 159, 64)',
-  'rgb(75, 192, 112)',
   'rgb(153, 102, 255)',
-  'rgb(255, 99, 132)',
-  'rgb(201, 203, 207)'
+  `rgb(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b})`,
+  'rgb(201, 162, 39)',
+  'rgb(160, 160, 170)',
+  'rgb(255, 159, 64)'
 ];
+
+// Green and red of the theme (`$green` and `$red` of Bootstrap)
+const NEGATIVE_COLOR_RGB = { b: 69, g: 53, r: 220 };
+const POSITIVE_COLOR_RGB = { b: 69, g: 167, r: 40 };
+
+/**
+ * Returns the green (gain) or red (loss) of a chart line as `r, g, b`, from
+ * its last value compared to a reference (e.g. 0 % or its first value)
+ */
+export function getTrendColorRgb({
+  reference,
+  values
+}: {
+  reference?: number;
+  values: (number | null | undefined)[];
+}) {
+  const definedValues = values.filter((value): value is number => {
+    return typeof value === 'number' && Number.isFinite(value);
+  });
+
+  const start = reference ?? definedValues[0];
+  const end = definedValues.at(-1);
+
+  const { b, g, r } =
+    start !== undefined && end !== undefined && end < start
+      ? NEGATIVE_COLOR_RGB
+      : POSITIVE_COLOR_RGB;
+
+  return `${r}, ${g}, ${b}`;
+}
 
 export function getBenchmarkColor(index: number) {
   return BENCHMARK_COLORS[index % BENCHMARK_COLORS.length];

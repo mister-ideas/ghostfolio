@@ -43,7 +43,6 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 export class GfPortfolioPerformanceComponent {
   public readonly errors = input<ResponseError['errors']>();
   public readonly isLoading = input<boolean>(false);
-  public readonly isMarketOpen = input<boolean>();
   public readonly locale = input<string>(getLocale());
   public readonly performance = input.required<PortfolioPerformance | null>();
   public readonly precision = input.required<number, number>({

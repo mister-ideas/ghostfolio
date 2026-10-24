@@ -56,6 +56,8 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
    * Colors the whole figure (with `colorizeSign`) in green or red while the
    * market is open and in grey while it is closed
    */
+  /** Colors the whole figure (sign, number and unit) in green or red */
+  @Input() colorizeValue = false;
   @Input() isMarketOpen?: boolean;
   @Input() isPercent = false;
   @Input() locale?: string;
@@ -108,13 +110,13 @@ export class GfValueComponent implements AfterViewInit, OnChanges, OnDestroy {
   protected get trendColorClass() {
     if (
       !this.colorizeSign ||
-      this.isMarketOpen === undefined ||
+      (this.isMarketOpen === undefined && !this.colorizeValue) ||
       !isNumber(this.value)
     ) {
       return '';
     }
 
-    if (!this.isMarketOpen) {
+    if (this.isMarketOpen === false) {
       return 'text-body-secondary';
     }
 

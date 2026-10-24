@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Colored the line of the performance chart on the overview page, of the portfolio in the benchmark comparator and of the charts in the holding and benchmark detail dialogs in green for a gain and red for a loss
+- Kept the colors of the change and the performance of the portfolio while the markets are closed
 - Changed the default date range of users without a stored date range from `max` to `ytd`
 - Improved the holdings table of the home overview by adding the sorting by name and performance
 - Changed the default sorting of the holdings table to the performance in descending order

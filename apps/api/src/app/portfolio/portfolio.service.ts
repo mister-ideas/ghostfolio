@@ -1241,31 +1241,10 @@ export class PortfolioService {
       subscriptionType: user.subscription?.type
     });
 
-    const { errors, hasErrors, historicalData, positions } =
+    const { errors, hasErrors, historicalData } =
       await portfolioCalculator.getSnapshot();
 
     const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
-
-    // The quotes are cached, they only provide the state of the markets
-    const isMarketOpen = await this.dataProviderService
-      .getQuotes({
-        items: positions
-          .filter(({ quantity }) => {
-            return !quantity.eq(0);
-          })
-          .map(({ dataSource, symbol }) => {
-            return { dataSource, symbol };
-          }),
-        subscriptionType: user.subscription?.type
-      })
-      .then((quotes) => {
-        return Object.values(quotes).some(({ marketState }) => {
-          return marketState === 'open';
-        });
-      })
-      .catch(() => {
-        return undefined;
-      });
 
     const { chart: chartOfDateRange } =
       await portfolioCalculator.getPerformance({
@@ -1310,7 +1289,6 @@ export class PortfolioService {
       chart,
       errors,
       hasErrors,
-      isMarketOpen,
       dateOfFirstActivity: parseDate(historicalData[0]?.date),
       performance: {
         dividendInBaseCurrency,

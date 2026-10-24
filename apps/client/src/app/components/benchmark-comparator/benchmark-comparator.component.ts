@@ -4,11 +4,11 @@ import {
   getChartElementsOptions,
   getTimeAxisOptions,
   getTimeAxisUnit,
+  getTrendColorRgb,
   getValueAxisOptions,
   getVerticalHoverLinePlugin,
   getZeroLineAnnotation
 } from '@ghostfolio/common/chart-helper';
-import { primaryColorRgb } from '@ghostfolio/common/config';
 import { isIntradayDateRange } from '@ghostfolio/common/date-range.helper';
 import { getLocale, parseDate } from '@ghostfolio/common/helper';
 import {
@@ -152,7 +152,13 @@ export class GfBenchmarkComparatorComponent implements OnChanges, OnDestroy {
   }
 
   private initialize() {
-    const portfolioColor = `rgb(${primaryColorRgb.r}, ${primaryColorRgb.g}, ${primaryColorRgb.b})`;
+    // Green for a gain, red for a loss (the benchmarks use other colors)
+    const portfolioColor = `rgb(${getTrendColorRgb({
+      reference: 0,
+      values: this.performanceDataItems().map(({ value }) => {
+        return value;
+      })
+    })})`;
 
     const data: ChartData<'line'> = {
       datasets: [

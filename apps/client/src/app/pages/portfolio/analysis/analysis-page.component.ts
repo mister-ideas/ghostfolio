@@ -126,7 +126,6 @@ export class GfAnalysisPageComponent implements OnInit {
     { label: $localize`Yearly`, value: 'year' }
   ];
   protected readonly defaultDateRange = DEFAULT_USER_DATE_RANGE;
-  protected isMarketOpen: boolean | undefined;
   protected performance: PortfolioPerformance;
   protected readonly PerformanceCalculationType = PerformanceCalculationType;
   protected performanceDataItems: LineChartItem[];
@@ -223,7 +222,6 @@ export class GfAnalysisPageComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(({ holdings: { holdings }, intraday, performance }) => {
-        this.isMarketOpen = performance.isMarketOpen;
         this.performance = performance.performance;
 
         if (intraday) {
@@ -453,73 +451,70 @@ export class GfAnalysisPageComponent implements OnInit {
         range: this.user?.settings?.dateRange ?? DEFAULT_USER_DATE_RANGE
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(
-        ({ chart, dateOfFirstActivity, isMarketOpen, performance }) => {
-          this.dateOfFirstActivity = dateOfFirstActivity ?? new Date();
-          this.isMarketOpen = isMarketOpen;
+      .subscribe(({ chart, dateOfFirstActivity, performance }) => {
+        this.dateOfFirstActivity = dateOfFirstActivity ?? new Date();
 
-          this.investments = [];
-          this.performance = performance;
-          this.performanceDataItems = [];
-          this.performanceDataItemsInPercentage = [];
+        this.investments = [];
+        this.performance = performance;
+        this.performanceDataItems = [];
+        this.performanceDataItemsInPercentage = [];
 
-          for (const {
-            date,
-            dividendInPercentageWithCurrencyEffect,
-            netPerformanceInPercentageWithCurrencyEffect,
-            totalInvestmentValueWithCurrencyEffect,
-            valueInPercentage,
-            valueWithCurrencyEffect
-          } of chart ?? []) {
-            if (totalInvestmentValueWithCurrencyEffect !== undefined) {
-              this.investments.push({
-                date,
-                investment: totalInvestmentValueWithCurrencyEffect
-              });
-            }
-
-            const value = isNumber(valueWithCurrencyEffect)
-              ? valueWithCurrencyEffect
-              : valueInPercentage;
-
-            if (isNumber(value)) {
-              this.performanceDataItems.push({
-                date,
-                value
-              });
-            }
-
-            if (isNumber(netPerformanceInPercentageWithCurrencyEffect)) {
-              this.performanceDataItemsInPercentage.push({
-                date,
-                value:
-                  netPerformanceInPercentageWithCurrencyEffect -
-                  (dividendInPercentageWithCurrencyEffect ?? 0)
-              });
-            }
+        for (const {
+          date,
+          dividendInPercentageWithCurrencyEffect,
+          netPerformanceInPercentageWithCurrencyEffect,
+          totalInvestmentValueWithCurrencyEffect,
+          valueInPercentage,
+          valueWithCurrencyEffect
+        } of chart ?? []) {
+          if (totalInvestmentValueWithCurrencyEffect !== undefined) {
+            this.investments.push({
+              date,
+              investment: totalInvestmentValueWithCurrencyEffect
+            });
           }
 
-          if (
-            this.deviceType() === 'mobile' &&
-            this.performance.currentValueInBaseCurrency >=
-              NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
-          ) {
-            this.precision = 0;
+          const value = isNumber(valueWithCurrencyEffect)
+            ? valueWithCurrencyEffect
+            : valueInPercentage;
+
+          if (isNumber(value)) {
+            this.performanceDataItems.push({
+              date,
+              value
+            });
           }
 
-          // Only the trading days, and the remaining ones of the current year
-          this.performanceDataItemsInPercentage = getTradingDayItems({
-            dateRange: this.dateRange,
-            items: this.performanceDataItemsInPercentage
-          });
-
-          this.isLoadingInvestmentChart = false;
-
-          this.updateBenchmarkDataItems();
-
-          this.changeDetectorRef.markForCheck();
+          if (isNumber(netPerformanceInPercentageWithCurrencyEffect)) {
+            this.performanceDataItemsInPercentage.push({
+              date,
+              value:
+                netPerformanceInPercentageWithCurrencyEffect -
+                (dividendInPercentageWithCurrencyEffect ?? 0)
+            });
+          }
         }
-      );
+
+        if (
+          this.deviceType() === 'mobile' &&
+          this.performance.currentValueInBaseCurrency >=
+            NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
+        ) {
+          this.precision = 0;
+        }
+
+        // Only the trading days, and the remaining ones of the current year
+        this.performanceDataItemsInPercentage = getTradingDayItems({
+          dateRange: this.dateRange,
+          items: this.performanceDataItemsInPercentage
+        });
+
+        this.isLoadingInvestmentChart = false;
+
+        this.updateBenchmarkDataItems();
+
+        this.changeDetectorRef.markForCheck();
+      });
 
     this.dataService
       .fetchPortfolioHoldings({
