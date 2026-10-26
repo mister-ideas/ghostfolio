@@ -19,8 +19,11 @@ export interface IntradayInstrument {
 }
 
 export interface IntradayHolding extends IntradayInstrument {
-  /** Exchange rate from the currency of the holding to the base currency */
-  exchangeRate: number;
+  /**
+   * Exchange rate from the currency of the holding to the base currency, at
+   * the start of the date range and now
+   */
+  exchangeRate: { now: number; start: number };
 
   /** Current quantity */
   quantity: number;
@@ -278,6 +281,34 @@ export function getPriceAt({
   return result;
 }
 
+/**
+ * Returns the exchange rate at a time of the date range. The rate moves in a
+ * straight line from the rate at the start to the rate now, so the last point
+ * of the chart matches the current value and an FX move during the period
+ * shows up in the change
+ */
+export function getExchangeRateAt({
+  exchangeRate,
+  now,
+  start,
+  time
+}: {
+  exchangeRate: { now: number; start: number };
+  now: number;
+  start: number;
+  time: number;
+}) {
+  if (now <= start) {
+    return exchangeRate.now;
+  }
+
+  const progress = Math.min(Math.max((time - start) / (now - start), 0), 1);
+
+  return (
+    exchangeRate.start + (exchangeRate.now - exchangeRate.start) * progress
+  );
+}
+
 function getPriceOfInterval({
   baseline,
   instrument,
@@ -338,7 +369,9 @@ export function getPortfolioIntradayItems({
   const startValue = holdings.reduce((sum, holding, index) => {
     return (
       sum +
-      getQuantityAt(holding, start) * baselines[index] * holding.exchangeRate
+      getQuantityAt(holding, start) *
+        baselines[index] *
+        holding.exchangeRate.start
     );
   }, 0);
 
@@ -358,7 +391,12 @@ export function getPortfolioIntradayItems({
             baseline: baselines[index],
             instrument: holding
           }) *
-          holding.exchangeRate
+          getExchangeRateAt({
+            exchangeRate: holding.exchangeRate,
+            now,
+            start,
+            time
+          })
       );
     }, 0);
 

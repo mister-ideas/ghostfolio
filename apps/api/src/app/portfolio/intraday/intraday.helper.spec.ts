@@ -193,7 +193,7 @@ describe('intraday helper', () => {
       holdings: [
         {
           ...europe,
-          exchangeRate: 1,
+          exchangeRate: { now: 1, start: 1 },
           // One share bought at 08:00 for 102
           quantity: 2,
           quantityChanges: [{ quantity: 1, time: time('2026-10-22T08:00:00Z') }]
@@ -207,6 +207,33 @@ describe('intraday helper', () => {
 
     // 08:00: 2 shares at 102 (204) - 100 - 102 = 2 on an investment of 202
     expect(items[1].value).toBeCloseTo(2 / 202);
+  });
+
+  it('moves the value with the exchange rate of the holding', () => {
+    const start = time('2026-10-22T07:00:00Z');
+    const now = time('2026-10-22T08:00:00Z');
+
+    const items = getPortfolioIntradayItems({
+      now,
+      start,
+      cashFlows: [],
+      grid: [start, time('2026-10-22T07:30:00Z'), now],
+      holdings: [
+        {
+          ...europe,
+          // The price stays at 100, only the exchange rate moves from 1 to 1.1
+          prices: [{ price: 100, time: time('2026-10-21T15:29:00Z') }],
+          exchangeRate: { now: 1.1, start: 1 },
+          quantity: 1,
+          quantityChanges: []
+        }
+      ],
+      intervalInMs: MINUTE
+    });
+
+    // The change of the rate is the change of the value: half way at 07:30, all of it at 08:00
+    expect(items[1].value).toBeCloseTo(0.05);
+    expect(items[2].value).toBeCloseTo(0.1);
   });
 
   it('detects an open market including the pre-market', () => {

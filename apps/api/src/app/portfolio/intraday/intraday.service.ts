@@ -8,7 +8,7 @@ import { PortfolioIntradayResponse } from '@ghostfolio/common/interfaces';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AssetSubClass, DataSource } from '@prisma/client';
-import { startOfMonth, startOfWeek, subDays } from 'date-fns';
+import { startOfDay, startOfMonth, startOfWeek, subDays } from 'date-fns';
 
 import { PortfolioService } from '../portfolio.service';
 import {
@@ -95,11 +95,11 @@ export class IntradayService {
         return {
           ...instrument,
           quantity,
-          exchangeRate: this.exchangeRateDataService.toCurrency(
-            1,
-            assetProfile.currency,
-            userCurrency
-          ),
+          exchangeRate: await this.getExchangeRateRange({
+            from,
+            userCurrency,
+            currency: assetProfile.currency
+          }),
           livePrice: marketPrice,
           quantityChanges: activitiesOfHolding.map(
             ({ date, quantity: activityQuantity, type }) => {
@@ -190,6 +190,32 @@ export class IntradayService {
       case 'wtd':
         return subDays(startOfWeek(today, { weekStartsOn: 1 }), 5);
     }
+  }
+
+  /**
+   * Returns the exchange rate of a currency at the start of the date range,
+   * which is the close of the day before, and now
+   */
+  private async getExchangeRateRange({
+    currency,
+    from,
+    userCurrency
+  }: {
+    currency: string;
+    from: Date;
+    userCurrency: string;
+  }) {
+    const [start, now] = await Promise.all([
+      this.exchangeRateDataService.toCurrencyAtDate(
+        1,
+        currency,
+        userCurrency,
+        subDays(startOfDay(from), 1)
+      ),
+      this.exchangeRateDataService.toCurrency(1, currency, userCurrency)
+    ]);
+
+    return { now, start };
   }
 
   private async getInstrument({
