@@ -194,7 +194,9 @@ export class IntradayService {
 
   /**
    * Returns the exchange rate of a currency at the start of the date range,
-   * which is the close of the day before, and now
+   * which is the last rate before the range (weekends and holidays have none),
+   * and now. Without a rate before the range, the rate now is used, so that
+   * the currency does not add a change
    */
   private async getExchangeRateRange({
     currency,
@@ -205,17 +207,28 @@ export class IntradayService {
     from: Date;
     userCurrency: string;
   }) {
-    const [start, now] = await Promise.all([
-      this.exchangeRateDataService.toCurrencyAtDate(
+    const now = this.exchangeRateDataService.toCurrency(
+      1,
+      currency,
+      userCurrency
+    );
+
+    let start: number | undefined;
+
+    for (let days = 1; days <= 4 && start === undefined; days++) {
+      const rate = await this.exchangeRateDataService.toCurrencyAtDate(
         1,
         currency,
         userCurrency,
-        subDays(startOfDay(from), 1)
-      ),
-      this.exchangeRateDataService.toCurrency(1, currency, userCurrency)
-    ]);
+        subDays(startOfDay(from), days)
+      );
 
-    return { now, start };
+      if (Number.isFinite(rate)) {
+        start = rate;
+      }
+    }
+
+    return { now, start: start ?? now };
   }
 
   private async getInstrument({
