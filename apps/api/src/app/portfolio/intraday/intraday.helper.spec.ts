@@ -236,6 +236,83 @@ describe('intraday helper', () => {
     expect(items[2].value).toBeCloseTo(0.1);
   });
 
+  it('starts from the stored close instead of the last intraday price', () => {
+    expect(
+      getBaselinePrice({
+        instrument: { ...europe, baselinePrice: 99 },
+        start: time('2026-10-22T07:00:00Z')
+      })
+    ).toBe(99);
+  });
+
+  it('takes the live price after the last intraday price (closing auction)', () => {
+    const start = time('2026-10-22T07:00:00Z');
+
+    const items = getPortfolioIntradayItems({
+      start,
+      cashFlows: [],
+      grid: [start, time('2026-10-22T08:00:00Z'), time('2026-10-22T16:00:00Z')],
+      holdings: [
+        {
+          ...europe,
+          baselinePrice: 100,
+          exchangeRate: { now: 1, start: 1 },
+          livePrice: 103,
+          quantity: 1,
+          quantityChanges: []
+        }
+      ],
+      intervalInMs: MINUTE,
+      now: time('2026-10-22T17:00:00Z')
+    });
+
+    // 07:00: intraday price 101. From the last intraday price on: the live
+    // price, which is the official close after the closing auction
+    expect(items[0].value).toBeCloseTo(0.01);
+    expect(items[1].value).toBeCloseTo(0.03);
+    expect(items[2].value).toBeCloseTo(0.03);
+  });
+
+  it('ends at the change of the value from the stored closes to the live prices', () => {
+    const start = time('2026-10-22T07:00:00Z');
+    const now = time('2026-10-22T19:00:00Z');
+
+    const items = getPortfolioIntradayItems({
+      now,
+      start,
+      cashFlows: [],
+      grid: [start, now],
+      holdings: [
+        {
+          ...europe,
+          baselinePrice: 100,
+          exchangeRate: { now: 1, start: 1 },
+          livePrice: 103,
+          quantity: 2,
+          quantityChanges: []
+        },
+        {
+          ...unitedStates,
+          baselinePrice: 50,
+          exchangeRate: { now: 0.92, start: 0.9 },
+          livePrice: 52,
+          quantity: 1,
+          quantityChanges: []
+        }
+      ],
+      intervalInMs: MINUTE
+    });
+
+    const startValue = 2 * 100 + 50 * 0.9;
+    const currentValue = 2 * 103 + 52 * 0.92;
+
+    // The same change as the performance of the date range
+    expect(items.at(-1).value).toBeCloseTo(
+      (currentValue - startValue) / startValue,
+      10
+    );
+  });
+
   it('detects an open market including the pre-market', () => {
     expect(
       isAnyMarketOpen({

@@ -9,7 +9,18 @@ export interface IntradayPeriod {
 }
 
 export interface IntradayInstrument {
-  /** Realtime price, used for the interval which contains the current time */
+  /**
+   * Close before the date range from the stored market data, which the
+   * performance of the date range starts from as well. The intraday prices do
+   * not contain the closing auction, so their last price of a day can differ
+   * from the official close
+   */
+  baselinePrice?: number;
+
+  /**
+   * Realtime price, used for the interval which contains the current time and
+   * after the last intraday price (e.g. the closing auction of the day)
+   */
   livePrice?: number;
 
   /** Sorted by time */
@@ -227,12 +238,16 @@ export function getIntradayGrid({
  * the close of the regular session over the post-market
  */
 export function getBaselinePrice({
-  instrument: { livePrice, prices, tradingPeriods },
+  instrument: { baselinePrice, livePrice, prices, tradingPeriods },
   start
 }: {
   instrument: IntradayInstrument;
   start: number;
 }) {
+  if (Number.isFinite(baselinePrice) && baselinePrice > 0) {
+    return baselinePrice;
+  }
+
   const lastRegularEnd = Math.max(
     ...tradingPeriods
       .filter(({ end, type }) => {
@@ -322,10 +337,11 @@ function getPriceOfInterval({
   now: number;
   time: number;
 }) {
+  const lastPriceTime = instrument.prices.at(-1)?.time ?? -Infinity;
+
   if (
     instrument.livePrice !== undefined &&
-    now >= time &&
-    now < time + intervalInMs
+    ((now >= time && now < time + intervalInMs) || time >= lastPriceTime)
   ) {
     return instrument.livePrice;
   }

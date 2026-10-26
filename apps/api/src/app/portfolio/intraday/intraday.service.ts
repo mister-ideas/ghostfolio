@@ -1,14 +1,22 @@
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
 import { YahooFinanceService } from '@ghostfolio/api/services/data-provider/yahoo-finance/yahoo-finance.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { ExchangeRatesByCurrency } from '@ghostfolio/api/services/exchange-rate-data/interfaces/exchange-rate-data.interface';
+import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
 import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
+import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import { DEFAULT_CURRENCY } from '@ghostfolio/common/config';
+import {
+  DATE_FORMAT,
+  getAssetProfileIdentifier
+} from '@ghostfolio/common/helper';
+import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
 import { PortfolioIntradayResponse } from '@ghostfolio/common/interfaces';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AssetSubClass, DataSource } from '@prisma/client';
-import { startOfDay, startOfMonth, startOfWeek, subDays } from 'date-fns';
+import { addDays, format, startOfMonth, startOfWeek, subDays } from 'date-fns';
 
 import { PortfolioService } from '../portfolio.service';
 import {
@@ -32,6 +40,7 @@ export class IntradayService {
   public constructor(
     private readonly activitiesService: ActivitiesService,
     private readonly exchangeRateDataService: ExchangeRateDataService,
+    private readonly marketDataService: MarketDataService,
     private readonly portfolioService: PortfolioService,
     private readonly redisCacheService: RedisCacheService,
     private readonly symbolProfileService: SymbolProfileService,
@@ -67,6 +76,38 @@ export class IntradayService {
       return assetProfile.assetSubClass !== AssetSubClass.CASH;
     });
 
+    // The performance of the date range starts from the close of this day, so
+    // the chart starts from the same stored close and exchange rate
+    const { startDate: rangeStartDate } = getIntervalFromDateRange({
+      dateRange
+    });
+
+    const [closes, exchangeRates] = await Promise.all([
+      this.getClosesAt({
+        assetProfileIdentifiers: [
+          ...positions.map(({ assetProfile: { dataSource, symbol } }) => {
+            return { dataSource, symbol };
+          }),
+          ...benchmarkProfiles.map(({ dataSource, symbol }) => {
+            return { dataSource, symbol };
+          })
+        ],
+        date: rangeStartDate
+      }),
+      this.exchangeRateDataService.getExchangeRatesByCurrency({
+        currencies: Array.from(
+          new Set(
+            positions.map(({ assetProfile }) => {
+              return assetProfile.currency;
+            })
+          )
+        ),
+        endDate: new Date(),
+        startDate: rangeStartDate,
+        targetCurrency: userCurrency
+      })
+    ]);
+
     const { activities } = await this.activitiesService.getActivities({
       userCurrency,
       userId,
@@ -95,8 +136,10 @@ export class IntradayService {
         return {
           ...instrument,
           quantity,
-          exchangeRate: await this.getExchangeRateRange({
-            from,
+          baselinePrice: closes[getAssetProfileIdentifier(assetProfile)],
+          exchangeRate: this.getExchangeRateRange({
+            exchangeRates,
+            rangeStartDate,
             userCurrency,
             currency: assetProfile.currency
           }),
@@ -118,12 +161,16 @@ export class IntradayService {
       benchmarkProfiles.map(async ({ dataSource, id, symbol }) => {
         return {
           id,
-          instrument: await this.getInstrument({
-            dataSource,
-            from,
-            interval,
-            symbol
-          })
+          instrument: {
+            ...(await this.getInstrument({
+              dataSource,
+              from,
+              interval,
+              symbol
+            })),
+            baselinePrice:
+              closes[getAssetProfileIdentifier({ dataSource, symbol })]
+          }
         };
       })
     );
@@ -193,42 +240,61 @@ export class IntradayService {
   }
 
   /**
-   * Returns the exchange rate of a currency at the start of the date range,
-   * which is the last rate before the range (weekends and holidays have none),
-   * and now. Without a rate before the range, the rate now is used, so that
-   * the currency does not add a change
+   * Returns the last stored close of each asset profile at or before the date
    */
-  private async getExchangeRateRange({
-    currency,
-    from,
-    userCurrency
+  private async getClosesAt({
+    assetProfileIdentifiers,
+    date
   }: {
-    currency: string;
-    from: Date;
-    userCurrency: string;
+    assetProfileIdentifiers: AssetProfileIdentifier[];
+    date: Date;
   }) {
-    const now = this.exchangeRateDataService.toCurrency(
-      1,
-      currency,
-      userCurrency
-    );
+    const closes: { [assetProfileIdentifier: string]: number } = {};
 
-    let start: number | undefined;
+    if (assetProfileIdentifiers.length === 0) {
+      return closes;
+    }
 
-    for (let days = 1; days <= 4 && start === undefined; days++) {
-      const rate = await this.exchangeRateDataService.toCurrencyAtDate(
-        1,
-        currency,
-        userCurrency,
-        subDays(startOfDay(from), days)
-      );
+    const marketData = await this.marketDataService.getRange({
+      assetProfileIdentifiers,
+      dateQuery: { gte: subDays(date, 14), lt: addDays(date, 1) }
+    });
 
-      if (Number.isFinite(rate)) {
-        start = rate;
+    // Sorted by date, so the latest close of each asset profile is kept
+    for (const { dataSource, marketPrice, symbol } of marketData) {
+      if (marketPrice > 0) {
+        closes[getAssetProfileIdentifier({ dataSource, symbol })] = marketPrice;
       }
     }
 
-    return { now, start: start ?? now };
+    return closes;
+  }
+
+  /**
+   * Returns the exchange rate of a currency at the start of the date range and
+   * now, from the same rates as the performance of the date range
+   */
+  private getExchangeRateRange({
+    currency,
+    exchangeRates,
+    rangeStartDate,
+    userCurrency
+  }: {
+    currency: string;
+    exchangeRates: ExchangeRatesByCurrency;
+    rangeStartDate: Date;
+    userCurrency: string;
+  }) {
+    const rates = exchangeRates[`${currency}${userCurrency}`] ?? {};
+
+    const now =
+      rates[format(new Date(), DATE_FORMAT)] ??
+      this.exchangeRateDataService.toCurrency(1, currency, userCurrency);
+
+    return {
+      now,
+      start: rates[format(rangeStartDate, DATE_FORMAT)] ?? now
+    };
   }
 
   private async getInstrument({
